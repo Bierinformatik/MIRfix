@@ -1,0 +1,2 @@
+# MIRfix
+The MIRfix pipeline
