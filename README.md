@@ -10,7 +10,7 @@ improved homology search as well as quantitative analyses.
 
 ##DEPENDENCIES
 The easiest way to install dependencies is using bioconda.
-In the envs directory you can find a file MIRfix.env, a simple ```conda create -n mirfix --file MIRfix.env``` will install all dependencies in the conda environment mirfix.
+In the envs directory you can find a file MIRfix.env, a simple ```conda env create -f MIRfix.env``` will install all dependencies in the conda environment mirfix.
 You can than use ```conda activate mirfix``` and run ```bash runMIRfix.sh``` from there.
 Make sure to fix parameters and add files according to what you want to analyze.
 For a test, go to the test directory and run ```bash testMIRfix.sh``` with files and parameters for testing or the ones already provided.
