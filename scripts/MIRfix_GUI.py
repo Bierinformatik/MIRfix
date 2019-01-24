@@ -25,12 +25,18 @@ import traceback as tb
 from distutils.spawn import find_executable
 sys.path.append('/scratch/fall/Ali_mirbase/lib/VRNA/249/lib64/python2.7/site-packages/')
 import RNA
+root=Tk()
+#'/scratch/fall/Ali_mirbase/lib/VRNA/249/lib64/python2.7/site-packages/'
+
+root.title("test")
+root.geometry("500x400")
 
 def getindex(sequence,specie,precID,precdesc,listnogenomes,listnotingenome,templong):#get the index of the original sequence in its genome
     try:
         specieitem=specie.split()
         listofgenomes=[]
-        lstgenomes = openfile(str(sys.argv[5]))
+        #lstgenomes = openfile(str(sys.argv[5]))
+        lstgenomes = openfile(str(E1.get()))
         flaggenome=0#if there is a genomes for the specie, then it is 1
         flagseq=0#if the sequence found in its genome, then it is 1
         minusstrand=False
@@ -122,12 +128,13 @@ def getindex(sequence,specie,precID,precdesc,listnogenomes,listnotingenome,templ
             tb.print_exception(exc_type, exc_value, exc_tb,
                                limit=20, file=h)
             print >>h, "*** tb_lineno:", exc_tb.tb_lineno
-
+            root.destroy()
 def getindex2mat(sequence,specie,precID,precdesc,listnogenomes,listnotingenome):#get the index of the original sequence in its genome
     try:
         specieitem=specie.split()
         listofgenomes=[]
-        lstgenomes = openfile(str(sys.argv[5]))
+        #lstgenomes = openfile(str(sys.argv[5]))
+        lstgenomes = openfile(str(E1.get()))
         flaggenome=0#if there is a genomes for the specie, then it is 1
         flagseq=0#if the sequence found in its genome, then it is 1
 
@@ -204,7 +211,7 @@ def getindex2mat(sequence,specie,precID,precdesc,listnogenomes,listnotingenome):
             tb.print_exception(exc_type, exc_value, exc_tb,
                                limit=20, file=h)
             print >>h, "*** tb_lineno:", exc_tb.tb_lineno
-
+            
 def flip(filename,filen,outdir,mappingfile,matfile,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,list2mat,listnogenomes,listnotingenome,templong,listgoodnew):#file name is the family name
     try:
         item=[]
@@ -231,14 +238,12 @@ def flip(filename,filen,outdir,mappingfile,matfile,listofnew,listofnewloop,listo
                         flagprec=1
                         item=famline.split()
                         matID=item[4].strip()#mature sequence ID
-                        printlog(["mat is here",matID])
+
                         mtf = openfile(matfile)
                         for mat in SeqIO.parse(mtf, "fasta"):#get the corresponding mature sequence and get position
                             if matID in str(mat.description):
-                                printlog(["mat is here1",matID])
                                 matdesc=mat.description
                                 flagmat=1
-                                printlog(["mat desc is here",matdesc])
                                 matseq=str(mat.seq).strip()
                                 matseq=matseq.replace('T','U')#replace T by U because the RNAfold produces the sequences as U
                                 spos=str(precseq).find(matseq)
@@ -3332,9 +3337,9 @@ def browse_maturefile():
 def browse_file_list():
     try:
         E2.delete(0, END)#to avoid reading wrong directory if the user uploaded a file twice!
-        fname = tkFileDialog.askopenfilename(title="Selecting list of fasta files or One fasta file",filetypes = (("Template files", "*.type"),("Fasta files", "*.fa") ,("Txt files", "*.txt"),("All files", "*")))
-        broButton["text"] = str(fname) if fname else 'Please browse one fasta file OR one txt file for list of fasta files'
-        if broButton["text"] =="Please browse one fasta file OR one txt file for list of fasta files":
+        fname = tkFileDialog.askopenfilename(title="Selecting list of fasta files",filetypes = (("Template files", "*.type"),("Fasta files", "*.fa") ,("Txt files", "*.txt"),("All files", "*")))
+        broButton["text"] = str(fname) if fname else 'Please browse one txt file as a list of fasta files'
+        if broButton["text"] =="Please browse one txt file as a list of fasta files":
             broButton.config(fg='red')
         else:
             broButton.config(fg='green')
@@ -3368,13 +3373,17 @@ def browse_genomes():
 
 def sublist(filename):
     try:
-        filesdir=str(sys.argv[3])
+        #filesdir=str(sys.argv[3])
+        filesdir=str(E6.get())
         command="list"
-        mapfile=str(sys.argv[6])
-        matfile=str(sys.argv[7])
-        matrdir=None            # Not needed of dialign run from bioconda
-        if len(sys.argv) > 9:
-            matrdir=str(sys.argv[9])
+        #mapfile=str(sys.argv[6])
+        mapfile=str(E4.get())
+        #matfile=str(sys.argv[7])
+        matfile=str(E5.get())
+        #matrdir=None            # Not needed of dialign run from bioconda
+        #if len(sys.argv) > 9:
+        #matrdir=str(sys.argv[9])
+        matrdir=str(E7.get())
         tProcessed=0#all start with 't', are for the total of all families
         tRemoved=0
         tTotalnumberofSequences=0
@@ -3470,13 +3479,15 @@ def sublist(filename):
 
         if ".fa" in filename:
             filen=filesdir+str(filename).strip()
-            outdir=str(sys.argv[2])+filename.strip()+".out/"
+            #outdir=str(sys.argv[2])+filename.strip()+".out/"
+            outdir=str(E3.get())+filename.strip()+".out/"
             f=os.popen("mkdir "+outdir)
             f.close()
             familyfileres=open(outdir+filename.strip()+"-res.fa","a")
         else:
             filename=str(filename).strip()
-            outdir=str(sys.argv[2])+filename.strip()+".out/"
+            #outdir=str(sys.argv[2])+filename.strip()+".out/"
+            outdir=str(E3.get())+filename.strip()+".out/"
             f=os.popen("mkdir "+outdir)
             f.close()
             familyfileres=open(outdir+filename.strip()+"-res.fa","a")
@@ -3505,7 +3516,12 @@ def sublist(filename):
         fshan.close()
         infile=""
         outfile=""
-        userflanking=int(sys.argv[8])
+        #userflanking=int(sys.argv[8])
+        if flanking.get()=="Please Choose The number of Flanking Nucleotides (upstream/downstream the 5'/3' matures)":
+                
+                userflanking=int(10)
+        else:
+                userflanking=int(flanking.get())
         fl = openfile(filen)
         for rec in SeqIO.parse(fl,'fasta'):
             pidsplit=rec.description.split()
@@ -4724,16 +4740,23 @@ def openfile(f):
                                limit=20, file=h)
             print >>h, "*** tb_lineno:", exc_tb.tb_lineno
 
-##############################MAIN##############################
-
-if __name__ == '__main__':
+def runprogram():
     try:
-        nthreads=int(sys.argv[1])
-        filelist=str(sys.argv[4])
+        #nthreads=int(sys.argv[1])
+        if threads.get()=="Please Choose The number of Flanking Nucleotides (upstream/downstream the 5'/3' matures)":
+                
+            nthreads=int(1)
+        else:
+            nthreads=int(threads.get())
+        #filelist=str(sys.argv[4])
+        filelist=str(E2.get())
         lstfams = open(filelist,'r') if not '.gz' in filelist else gzip.open(filelist,'r')
-        outd=str(sys.argv[2])
+        #outd=str(sys.argv[2])
+        outd=str(E3.get())
         lfams=[]
 
+        
+        
         for line in lstfams:
             lfams.append(line.strip())
 
@@ -4765,3 +4788,64 @@ if __name__ == '__main__':
             tb.print_exception(exc_type, exc_value, exc_tb,
                                limit=20, file=h)
             print >>h, "*** tb_lineno:", exc_tb.tb_lineno
+            root.destroy()
+    root.destroy()
+##############################MAIN##############################
+
+if __name__ == '__main__':
+    
+    button_opt = {'fill': Tkconstants.BOTH, 'padx': 5, 'pady': 5}
+    dirbut= Button(root, text = 'Select output directory', fg = 'blue', command= outdirectory)
+    dirbut.pack(**button_opt) ## must pack separately to get the value to dirbut   
+
+    fdirbut= Button(root, text = 'Please select the directory of the fasta file(s) in the list', fg = 'blue', command= filesdirectory)
+    fdirbut.pack(**button_opt) ## must pack separately to get the value to dirbut 
+
+    broButton = Button(master = root, text = 'Browse the fasta file(s) list',fg='blue' ,  command=browse_file_list)
+    broButton.pack(**button_opt)
+
+    genbutton = Button(master = root, text = 'Browse Genomes',fg='blue' ,  command=browse_genomes)
+    genbutton.pack(**button_opt)
+
+    mapbutton = Button(master = root, text = 'Browse Mapping File',fg='blue' ,  command=browse_mappingfile)
+    mapbutton.pack(**button_opt)
+
+    maturebutton = Button(master = root, text = 'Browse Mature File',fg='blue' ,  command=browse_maturefile)
+    maturebutton.pack(**button_opt)
+
+    matricesbutton = Button(master = root, text = 'Browse the Matrices directory',fg='blue' ,  command=browse_matrices)
+    matricesbutton.pack(**button_opt)
+
+    #submit_file = Button(root, text ="Submit file", command = subfile)
+    #submit_file.pack(side=LEFT, padx = 6, pady=6)
+
+    submit_list = Button(root, text ="Submit list", command = runprogram)
+    submit_list.pack(side=LEFT, padx = 6, pady=6)
+
+    OPTIONS = []
+    for i in range(0,51):
+        OPTIONS.append(i)
+    flanking = StringVar(root)
+    #flanking.set(10) # default value
+    flanking.set("Please Choose The number of Flanking Nucleotides (upstream/downstream the 5'/3' matures)")
+    droplist = OptionMenu(root,flanking, *OPTIONS)
+    droplist.config(fg="BLUE")
+    #w.pack(side=TOP, padx = 0, pady=0)
+    droplist.place(x = 0, y=280)
+    OPTION = []
+    for i in range(0,51):
+        OPTION.append(i)
+    threads = StringVar(root)
+    #flanking.set(10) # default value
+    threads.set("Please Choose The number of files to run in parallel")
+    droplist1 = OptionMenu(root,threads, *OPTION)
+    droplist1.config(fg="BLUE")
+    droplist1.place(x = 750, y=280)
+    E1 = Entry(root, bd =5)#genomes 
+    E2 = Entry(root, bd =5)#file or list
+    E3 = Entry(root, bd =5)#output directory
+    E4 = Entry(root, bd =5)#mapping file
+    E5 = Entry(root, bd =5)#matrure file
+    E6 = Entry(root, bd =5)#files directory
+    E7 = Entry(root, bd =5)#matrices directory
+    root.mainloop()
