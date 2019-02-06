@@ -16,7 +16,7 @@ Make sure to fix parameters and add files according to what you want to analyze.
 For a test, go to the test directory and run ```bash testMIRfix.sh``` with files and parameters for testing or the ones already provided.
 
 ## PARAMETERS
-(1 or 2) (outdir) (filesdir) (file or list) (genomes) (mapfile) (matfile) (matrice) (flank)
+(1 or 2) (outdir) (filesdir) (file or list) (genomes) (mapfile) (matfile) (flank) (matrice)
 
 (1 or 2): 1 for a file and for list of files
 (outdir): output directory
@@ -25,11 +25,16 @@ For a test, go to the test directory and run ```bash testMIRfix.sh``` with files
 (genomes): The genomes to search (list) as explained in the Documentation
 (mapfile): mapping file
 (matfile): The mature sequences fasta file
-(matrices): The directory where the matrices are, please add the "/" at the end as in the example below
 (flank): we are using 10 in our study
+(matrices): The directory where the matrices are, please add the "/" at the end as in the example below # Please
+not that when using conda environment no need for this parameter.
+
 
 ## USAGE
 bash runMIRfix.sh
+To run an example, go to the directory "RUNexample/" and run the pipeline.
+Just change edit the directory in each line in the file "genomes_list.txt" to your
+local directory to the genomes. 
 
 ## MORE
 Please have a look at the detailed documentation in the docs folder.
