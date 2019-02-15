@@ -9,5 +9,13 @@ mkdir -p ${location}/output
 
 echo "Running MIRfix with ${cores} cores, ${extension}nt extension at ${location}"
 
-python2 MIRfix.py ${cores} ${location}/output/ ${location}/Families/ ${location}/listoffamilies.txt ${location}/fasta_to_search.txt ${location}/mapping_between_precursor_and_families.txt ${location}/mature_sequences.fa ${extension}
+cp mature.fa maturetest.fa
+cp mapping.txt mappingtest.txt
 
+python2 MIRfix.py ${cores} ${location}/output/ ${location}/Families/ ${location}/list.txt ${location}/genomes_list.txt ${location}/mappingtest.txt ${location}/maturetest.fa ${extension}
+
+echo "Found "`diff mature.fa maturetest.fa`
+echo "At "`diff mapping.txt mappingtest.txt
+
+echo -e "\nCleanup\n"
+rm -f maturetest.fa mappingtest.txt`
