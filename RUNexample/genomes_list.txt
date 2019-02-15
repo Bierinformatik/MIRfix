@@ -1,0 +1,13 @@
+genomes/Bos_taurus_bosTau6.fa                        
+genomes/Capra_hircus.fa                             
+genomes/Cricetulus_griseus_Cgr1.0.fa                
+genomes/Equus_caballus.EquCab2.56.dna.toplevel.fa
+genomes/GCA_000151905.3.Gorilla_gorilla.fa  
+genomes/GCA_000334495.1.Tupaia_chinensis.fa 
+genomes/GCA_000772875.3.Macaca_mulatta.fa   
+genomes/Mus_musculus_GRCm38.fa              
+genomes/GCA_000001405.15.Homo_sapiens.fa     
+genomes/GCA_000001515.5.Pan_troglodytes.fa   
+genomes/GCA_000001895.4.Rattus_norvegicus.fa 
+genomes/GCA_000003025.4.Sus_scrofa.fa        
+genomes/Pongo_pygmaeus.PPYG2.56.dna.toplevel.fa
