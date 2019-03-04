@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 from __future__ import division
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -19,11 +21,9 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import json
 import gzip
-import importlib
 import multiprocessing, logging
 import traceback as tb
 from distutils.spawn import find_executable
-sys.path.append('/scratch/fall/Ali_mirbase/lib/VRNA/249/lib64/python2.7/site-packages/')
 import RNA
 
 def getindex(sequence,specie,precID,precdesc,listnogenomes,listnotingenome,templong):#get the index of the original sequence in its genome
@@ -4697,7 +4697,7 @@ def sublist(filename):
         printlog(list2mat)
         if os.path.isfile(outdir+filename.strip()+"-res.fa"):
                 fr1=os.popen("rm "+outdir+filename.strip()+"-res.fa")
-                
+
     except Exception as err:
         exc_type, exc_value, exc_tb = sys.exc_info()
         with open('error','a') as h:

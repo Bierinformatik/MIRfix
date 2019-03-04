@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 from __future__ import division
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -19,14 +21,11 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import json
 import gzip
-import importlib
 import multiprocessing, logging
 import traceback as tb
 from distutils.spawn import find_executable
-sys.path.append('/scratch/fall/Ali_mirbase/lib/VRNA/249/lib64/python2.7/site-packages/')
 import RNA
 root=Tk()
-#'/scratch/fall/Ali_mirbase/lib/VRNA/249/lib64/python2.7/site-packages/'
 
 root.title("test")
 root.geometry("500x400")
@@ -211,7 +210,7 @@ def getindex2mat(sequence,specie,precID,precdesc,listnogenomes,listnotingenome):
             tb.print_exception(exc_type, exc_value, exc_tb,
                                limit=20, file=h)
             print >>h, "*** tb_lineno:", exc_tb.tb_lineno
-            
+
 def flip(filename,filen,outdir,mappingfile,matfile,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,list2mat,listnogenomes,listnotingenome,templong,listgoodnew):#file name is the family name
     try:
         item=[]
@@ -3518,7 +3517,7 @@ def sublist(filename):
         outfile=""
         #userflanking=int(sys.argv[8])
         if flanking.get()=="Please Choose The number of Flanking Nucleotides (upstream/downstream the 5'/3' matures)":
-                
+
                 userflanking=int(10)
         else:
                 userflanking=int(flanking.get())
@@ -4713,7 +4712,7 @@ def sublist(filename):
         printlog(list2mat)
         if os.path.isfile(outdir+filename.strip()+"-res.fa"):
                 fr1=os.popen("rm "+outdir+filename.strip()+"-res.fa")
-                
+
     except Exception as err:
         exc_type, exc_value, exc_tb = sys.exc_info()
         with open('error','a') as h:
@@ -4744,7 +4743,7 @@ def runprogram():
     try:
         #nthreads=int(sys.argv[1])
         if threads.get()=="Please Choose The number of Flanking Nucleotides (upstream/downstream the 5'/3' matures)":
-                
+
             nthreads=int(1)
         else:
             nthreads=int(threads.get())
@@ -4755,8 +4754,8 @@ def runprogram():
         outd=str(E3.get())
         lfams=[]
 
-        
-        
+
+
         for line in lstfams:
             lfams.append(line.strip())
 
@@ -4793,13 +4792,13 @@ def runprogram():
 ##############################MAIN##############################
 
 if __name__ == '__main__':
-    
+
     button_opt = {'fill': Tkconstants.BOTH, 'padx': 5, 'pady': 5}
     dirbut= Button(root, text = 'Select output directory', fg = 'blue', command= outdirectory)
-    dirbut.pack(**button_opt) ## must pack separately to get the value to dirbut   
+    dirbut.pack(**button_opt) ## must pack separately to get the value to dirbut
 
     fdirbut= Button(root, text = 'Please select the directory of the fasta file(s) in the list', fg = 'blue', command= filesdirectory)
-    fdirbut.pack(**button_opt) ## must pack separately to get the value to dirbut 
+    fdirbut.pack(**button_opt) ## must pack separately to get the value to dirbut
 
     broButton = Button(master = root, text = 'Browse the fasta file(s) list',fg='blue' ,  command=browse_file_list)
     broButton.pack(**button_opt)
@@ -4841,7 +4840,7 @@ if __name__ == '__main__':
     droplist1 = OptionMenu(root,threads, *OPTION)
     droplist1.config(fg="BLUE")
     droplist1.place(x = 750, y=280)
-    E1 = Entry(root, bd =5)#genomes 
+    E1 = Entry(root, bd =5)#genomes
     E2 = Entry(root, bd =5)#file or list
     E3 = Entry(root, bd =5)#output directory
     E4 = Entry(root, bd =5)#mapping file

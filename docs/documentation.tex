@@ -17,8 +17,8 @@
 %\usepackage{soul}  % KR: added as it contains \st command
 %\usepackage{epsfig, a4wide}
 %\usepackage{floatflt}
-\usepackage{url}
-%\usepackage{hyperref}
+%\usepackage{url}
+\usepackage{hyperref}
 \usepackage{colortbl}
 \usepackage{graphics,amssymb,amsmath,epsfig,color}
 \usepackage{graphicx}
@@ -29,15 +29,17 @@
 \usepackage{tikz}
 %\usepackage{float} % for placing figures where i want
 \usepackage{indentfirst}
-\usepackage[linktocpage=false]{hyperref}
+%\usepackage[linktocpage=false]{hyperref}
 \usepackage{enumerate}
 \usepackage{enumitem}
 \usepackage{listings}
 %\usepackage{graphicx}
 %\usepackage{color}
 \hypersetup{
-    colorlinks=false,
-    pdfborder={0 0 0},}
+    colorlinks=true,
+    pdfborder={0 0 0},
+    urlcolor=blue
+  }
 \setcounter{tocdepth}{3}
 \setcounter{secnumdepth}{4}
 \setcounter{secnumdepth}{4}
@@ -61,16 +63,33 @@
 \chapter*{Installation}\stepcounter{chapter}\addcontentsline{toc}{chapter}{Installation}
 \section{Conda environment}
 \noindent
-The easiest way to install dependencies is using bioconda.
-In the envs directory you can find a file MIRfix.env, a simple ```conda env create -f MIRfix.env``` will install all dependencies in the conda environment mirfix.
-You can than use ```conda activate mirfix``` and run ```bash runMIRfix.sh``` from there.
-Make sure to fix parameters and add files according to what you want to analyze.
-For a test, go to the test directory and run ```bash testMIRfix.sh``` with files and parameters for testing or the ones already provided.
+The easiest way to install MIRfix or its dependencies is using bioconda.
+For this to work please first install \href{https://conda.io/projects/conda/en/latest/user-guide/install/index.html}{conda},
+then \href{https://conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html}{configure conda} to use the \href{https://bioconda.github.io/}{bioconda channel}.
 
-\note{ 2) Is it possible to do this for the GUI version?...I already
-  mentioned in the following that when installed with the conda no
-  need to add the directory of the matrices, otherwise it should be (I
-  mean here only for the command line version).\\}
+In short, first install conda, then run
+
+```conda config --add channels defaults```
+
+```conda config --add channels bioconda```
+
+```conda config --add channels conda-forge```
+
+Once conda is installed and configured, you can simply install MIRfix:
+
+```conda create -n mirfix mirfix ``` will install MIRfix in the conda environment mirfix.
+
+You can than use ```conda activate mirfix``` and run ```bash runMIRfix.sh``` from there.
+
+
+Or you install all dependencies for MIRfix into a conda environment as follows:
+
+In the *envs* directory you can find a file *MIRfix.env*, a simple
+
+```conda env create -f MIRfix.env``` will install all dependencies in the conda environment mirfix.
+
+You can than use ```conda activate mirfix``` and run ```bash runMIRfix.sh``` from a local clone of the git repository or the unpacked \href{https://github.com/Bierinformatik/MIRfix/archive/v1.0.tar.gz}{source}.
+
 \section{Pre-requests for manual installation}
 \subsection{Python (version and modules)}
 \noindent
@@ -120,7 +139,7 @@ are installed.\\
 Two different alignment tools are called in the script,\\
 \textit{clustalw} (CLUSTAL 2.0.12 multiple sequence alignment)\\
 and\\
-\textit{dialign2} (\textit{Anchored DIALIGN} you can find it at \url{http://dialign.gobics.de/}).\\ 
+\textit{dialign2} (\textit{Anchored DIALIGN} you can find it at \href{http://dialign.gobics.de/}{http://dialign.gobics.de/}).\\ 
 As  this tool requires setting 
 an environment variable pointing to the substitution matrices downloaded with dialign installation, the user is asked to
 upload this directory in the GUI of the pipeline. We recommend copying this folder to your work directory for simplicity.
@@ -128,7 +147,7 @@ upload this directory in the GUI of the pipeline. We recommend copying this fold
 \noindent
 \textit{RNAfold} and \textit{RNAalifold} are secondary structure prediction tools, which calculate the minimum free energy
 (MFE).\\
-It is found at \url{ https://www.tbi.univie.ac.at/RNA/#download}\\
+It is found at \href{https://www.tbi.univie.ac.at/RNA/\#download}{ https://www.tbi.univie.ac.at/RNA/\#download}\\
 \textbf{HINT:} in the .py script add your own path to the RNA package in the line:\\
 e.g: sys.path.append('\textit{/local-path/vrna249/lib64/python2.7/site-packages/}')
 
