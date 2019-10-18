@@ -4740,16 +4740,6 @@ if __name__ == '__main__':
         printlog(lfams)
         pool = multiprocessing.Pool(processes=nthreads, maxtasksperchild=1)
 
-        global RNA
-        RNA = importlib.import_module('RNA')
-        globals().update(
-            {n: getattr(RNA, n) for n in RNA.__all__}
-            if hasattr(RNA, '__all__')
-            else {k: v for (k, v) in RNA.__dict__.items() if not k.startswith('_')
-            })
-        md = RNA.md()
-        md = None
-
         find_executable('clustalw') or sys.exit('Please install clustalw to run this')
         find_executable('dialign2-2') or sys.exit('Please install dialign2-2 to run this')
 
