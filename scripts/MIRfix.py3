@@ -26,9 +26,8 @@ from lib.logger import makelogdir, setup_multiprocess_logger
 # Create log dir
 makelogdir('logs')
 # Define loggers
+global scriptname, streamlog, log           # global to ensure that later manipulation of loglevel is possible
 scriptname=os.path.basename(__file__)
-global streamlog, log           # global to ensure that later manipulation of loglevel is possible
-streamlog = setup_multiprocess_logger(name='', log_file='stderr', logformat='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M', level='WARNING')
 
 ##import Bio modules
 from Bio import SeqIO
@@ -3330,28 +3329,8 @@ def sublist(filename):
         listcorrected=[]
         listcorrectedori=[]
 
-        log.debug(filename)
-        del listofnew[:]#add seq id and new sequence
-        del listofnewloop[:]#add seq id and new sequence
-        del listofoldloop[:]#add seq id and old seq
-        del listofold[:]#add seq id and old seq
-        del listofboth[:]#add the id, that shouldn't be added to the new file
-        del listremovedbroken[:]
-        del listremovedscore[:]
-        del listofmirstar[:]
-        del listnomat[:]
-        del list2mat[:]
-        del listnogenomes[:]#list of IDs that no existing genome to search, for their species
-        del listnotingenome[:]
-        del list2matcoor[:]
-        del list1matcoor[:]
-        del templong[:]
-        del listoldstatus[:]
-        del listmisalignedcorr[:]
-        del listgoodnew[:]
-        del listcorrected[:]
-        del listcorrectedori[:]
-        numberoffamilies=numberoffamilies+1
+        log.debug(logid+filename)
+        numberoffamilies+=1
         countcorrected=0
         countcorrectedTonew=0
         Processed=0
@@ -3385,21 +3364,21 @@ def sublist(filename):
         flagnomatexists=False
 
         if ".fa" in filename:
-            filen=filesdir+str(filename).strip()
-            outdir=str(args.outdir)+filename.strip()+".out/"
+            filename=str(filename).strip()
+            filen=filesdir+filename
+            outdir=str(args.outdir)+filename+".out/"
             makeoutdir(outdir)
-            familyfileres=open(outdir+filename.strip()+"-res.fa","a")
+            familyfileres=open(outdir+filename+"-res.fa","a")
         else:
             filename=str(filename).strip()
-            outdir=str(args.outdir)+filename.strip()+".out/"
+            outdir=str(args.outdir)+filename+".out/"
             makeoutdir(outdir)
-            familyfileres=open(outdir+filename.strip()+"-res.fa","a")
-            filen=filesdir+str(filename.strip())+".fa"
+            filen=filesdir+filename+".fa"
+            familyfileres=open(outdir+filename+"-res.fa","a")
 
         OldShanon=0
         NewShanon=0
         familyfileresfinal=open(outdir+filename.strip()+"-Final.fasta","a")
-        summaryfile=open(outdir+filename.strip()+"-summ.txt","a")
         anchorcoorfile=open(outdir+filename.strip()+"-Final.anc","a")
         tempcountsucnomat=0
         infile=""
@@ -3420,60 +3399,61 @@ def sublist(filename):
         infile=""
         outfile=""
         userflanking=int(args.extension)
-        fl = openfile(filen)
-        for rec in SeqIO.parse(fl,'fasta'):
-            pidsplit=rec.description.split()
-            pid=str(pidsplit[1])
-            mat2seq=str(rec.seq)
-            coorflag=0
-            smat=""
-            emat=""
-            mf = openfile(mapfile)
-            for line in mf:
-                linesplit=line.split()
-                if len(linesplit)>8 and pid in line:
-                    list2mat.append(linesplit[2].strip())
-                    numofmat=((len(linesplit)+1)//3)-1
-                    smat=linesplit[4]#first mat ID
-                    emat=linesplit[4+numofmat-1].strip()#last mat ID
-                    mtf = openfile(matfile)
-                    first = None
-                    second = None
-                    for k in SeqIO.parse(mtf,'fasta'):
-                        if smat in k.description:
-                            first = str(k.seq)
-                        if emat in k.description:
-                            second = str(k.seq)
-                        if first and second:
-                            list2mat.append(first)#add the first mat seq
-                            list2mat.append(second)#add the second mat seq
-                            break
-                    if first and not second:
-                        list2mat.append(first)#add the first mat seq
-                        list2mat.append('')#empty string for second
-                    if second and not first:
-                        list2mat.append('')#empty string for first
-                        list2mat.append(second)#add the second mat seq
 
-        log.debug(["list 2 mat is here",list2mat])
+        with openfile(filen) as fl:
+            for rec in SeqIO.parse(fl,'fasta'):
+                pidsplit=rec.description.split()
+                pid=str(pidsplit[1])
+                mat2seq=str(rec.seq)
+                coorflag=0
+                smat=""
+                emat=""
+                with openfile(mapfile) as mf:
+                    for line in mf:
+                        linesplit=line.split()
+                        if len(linesplit)>8 and pid in line:
+                            list2mat.append(linesplit[2].strip())
+                            numofmat=((len(linesplit)+1)//3)-1
+                            smat=linesplit[4]#first mat ID
+                            emat=linesplit[4+numofmat-1].strip()#last mat ID
+                            mtf = openfile(matfile)
+                            first = None
+                            second = None
+                            for k in SeqIO.parse(mtf,'fasta'):
+                                if smat in k.description:
+                                    first = str(k.seq)
+                                if emat in k.description:
+                                    second = str(k.seq)
+                                if first and second:
+                                    list2mat.append(first)#add the first mat seq
+                                    list2mat.append(second)#add the second mat seq
+                                    break
+                            if first and not second:
+                                list2mat.append(first)#add the first mat seq
+                                list2mat.append('')#empty string for second
+                            if second and not first:
+                                list2mat.append('')#empty string for first
+                                list2mat.append(second)#add the second mat seq
+
+        log.debug(logid+str(["list 2 mat is here",list2mat]))
 
         if os.path.isfile(outdir+'nomat-'+filename.strip()+'.fa'):#before calling checknomat in Submit
-            log.debug(["The file "+filename.strip()+" already processed, will be done again"])
-            f=os.popen("rm "+outdir+'nomat-'+filename+'.fa')
+            log.debug(logid+"The file "+filename.strip()+" already processed, will be done again")
+            os.remove(outdir+'nomat-'+filename+'.fa')
 
         flagnomatexists,nomats,listremovedbroken,listremovedscore,listnomat=checknomat(filen,mapfile,matfile,outdir,filename,listremovedbroken,listremovedscore,nomats,listnomat)
-        log.debug(["test A"])
+        log.debug(logid+"test A")
 
         if flagnomatexists and nomats!=-1:
-            log.debug("flagmathere")
+            log.debug(logid+"flagmathere")
             if os.path.isfile(outdir+filename.strip()+"-new.fa"):
-                f=os.popen("rm "+outdir+filename.strip()+"-new.fa")
+                os.remove(outdir+filename.strip()+"-new.fa")
 
             listnomatremoved=listremovedbroken+listremovedscore
-            log.debug(["all removed",listnomatremoved])
+            log.debug(logid+str(["all removed",listnomatremoved]))
 
             if len(listnomatremoved)>0:
-                log.debug("all list")
+                log.debug(logid+"all list")
                 fl = openfile(filen)
                 for record in SeqIO.parse(fl, 'fasta'):
                     tempdes=record.description
@@ -3483,7 +3463,9 @@ def sublist(filename):
                         newprecfile.write(">"+str(tempdes)+"\n"+str(record.seq)+"\n")
                         newprecfile.close()
 
-            f=os.popen("rm "+outdir+"tempfold.fa "+outdir+"tempmat.fa "+outdir+"temptoalign.aln "+outdir+"temptoalign.dnd "+outdir+"temptoalign.fa "+outdir+"temptoalign.txt "+outdir+"temptofold.fa "+outdir+"temptopredict.aln "+outdir+"temptopredict.dnd "+outdir+"temptopredict.fa ")
+            for f in [outdir+"tempfold.fa", outdir+"tempmat.fa", outdir+"temptoalign.aln",outdir+"temptoalign.dnd", outdir+"temptoalign.fa", outdir+"temptoalign.txt", outdir+"temptofold.fa", outdir+"temptopredict.aln", outdir+"temptopredict.dnd", outdir+"temptopredict.fa"]:
+                if os.path.isfile(f):
+                    os.remove(f)
 
             if len(listnomatremoved)>0:
                 listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listnogenomes,listnotingenome,templong,listgoodnew=flip(filename.strip(),outdir+filename+"-new.fa",outdir,mapfile,matfile,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,list2mat,listnogenomes,listnotingenome,templong,listgoodnew)
@@ -3491,49 +3473,50 @@ def sublist(filename):
                 listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listnogenomes,listnotingenome,templong,listgoodnew=flip(filename.strip(),filen,outdir,mapfile,matfile,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,list2mat,listnogenomes,listnotingenome,templong,listgoodnew)
 
         elif flagnomatexists and nomats==-1:
-            summaryfile.write("no matures for the sequences and no related matures in the mapping file\n")
+            with open(outdir+filename.strip()+"-summ.txt","a") as summaryfile:
+                summaryfile.write("no matures for the sequences and no related matures in the mapping file\n")
 
         elif not flagnomatexists:
-            log.debug(["this flip",flagnomatexists])
+            log.debug(logid+str(["this flip",flagnomatexists]))
             listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listnogenomes,listnotingenome,templong,listgoodnew=flip(filename.strip(),filen,outdir,mapfile,matfile,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,list2mat,listnogenomes,listnotingenome,templong,listgoodnew)#filename: filename/family, filen: the file itself(with the directory)
 
-        log.debug(["test B"])
+        log.debug(logid+"test B")
         if os.path.isfile(outdir+filename+"-new.fa"):
-            f=os.popen("rm "+outdir+filename+"-new.fa")
+            os.remove(outdir+filename+"-new.fa")
 
         if len(listofnew)>0:
             for i in range(0,len(listofnew)):
                 if i%2==0:
-                    log.debug("new")
-                    log.debug([">"+listofnew[i],listofnew[i+1]])
+                    log.debug(logid+"new")
+                    log.debug(logid+([">"+listofnew[i],listofnew[i+1]]))
                     familyfileres.write(">"+str(listofnew[i])+"\n"+str(listofnew[i+1].replace('T','U'))+"\n")
 
         if len(listofnewloop)>0:
             for i in range(0,len(listofnewloop)):
                 if i%2==0:
-                    log.debug("new loop")
-                    log.debug([">"+listofnewloop[i],listofnewloop[i+1]])
+                    log.debug(logid+"new loop")
+                    log.debug(logid+str([">"+listofnewloop[i],listofnewloop[i+1]]))
                     familyfileres.write(">"+str(listofnewloop[i])+"\n"+str(listofnewloop[i+1].replace('T','U'))+"\n")
 
         if len(listofold)>0:
             for i in range(0,len(listofold)):
                 if i%2==0:
-                    log.debug("old")
-                    log.debug([">"+listofold[i],listofold[i+1]])
+                    log.debug(logid+"old")
+                    log.debug(logid+([">"+listofold[i],listofold[i+1]]))
                     familyfileres.write(">"+str(listofold[i])+"\n"+str(listofold[i+1].replace('T','U'))+"\n")
 
         if len(listofoldloop)>0:
             for i in range(0,len(listofoldloop)):
                 if i%2==0:
-                    log.debug("old loop")
-                    log.debug([">"+listofoldloop[i],listofoldloop[i+1]])
+                    log.debug(logid+"old loop")
+                    log.debug(logid+str([">"+listofoldloop[i],listofoldloop[i+1]]))
                     familyfileres.write(">"+str(listofoldloop[i])+"\n"+str(listofoldloop[i+1].replace('T','U'))+"\n")
 
         listnomatbroken=listremovedbroken
         listnomatscore=listremovedscore
 
         if len(list2mat)>0:
-            log.debug("list2mat: "+str(list2mat))
+            log.debug(logid+"list2mat: "+str(list2mat))
             for i in range(0,len(list2mat),3):
                 precID=list2mat[i]
                 fmatseq=list2mat[i+1].strip()#first mat id
@@ -3860,10 +3843,11 @@ def sublist(filename):
                                 star=True
                                 break
                             else:
-                                log.debug(logid+'Searching for curmatstar with '+' '.join([curmatID.strip(), starrecID.strip(), starrec.description]) )
+                                log.debug(logid+'Searching for curmatstar in '+str(starrec)+' with '+';'.join([curmatID.strip(),starrecID.strip(),resprecid.strip(),starrec.description]))
 
                     if not curmatstar:
                         log.error(logid+'Not possible to define curmatstar for '+str(matfile)+' and '+str(outdir+filename.strip()+"-mirstar.fa"))
+                        sys.exit()
 
                     log.debug(["coor1temp",longseq,curmatseq])
                     coortemp1=int(longseq.index(curmatseq))
@@ -4181,118 +4165,119 @@ def sublist(filename):
 
         finalcoor.close()
 
-        summaryfile.write("---------------------------Original precursors with bad positioned matures ----------------------------\n")
-        if len(listofoldloop)>0:
-            for k in range(0,len(listofoldloop)):
-                if k%2==0:
-                    tempsplit=listofoldloop[k].split()
-                    summaryfile.write(str(tempsplit[1].strip())+"\n")
-        else:
-            summaryfile.write("---> NO Original precursors with bad positioned matures\n")
-        summaryfile.write("\n")
-        summaryfile.write("---------------------------flipped/changed precursors ----------------------------\n")
+        with open(outdir+filename.strip()+"-summ.txt","a") as summaryfile:
+            summaryfile.write("---------------------------Original precursors with bad positioned matures ----------------------------\n")
+            if len(listofoldloop)>0:
+                for k in range(0,len(listofoldloop)):
+                    if k%2==0:
+                        tempsplit=listofoldloop[k].split()
+                        summaryfile.write(str(tempsplit[1].strip())+"\n")
+            else:
+                summaryfile.write("---> NO Original precursors with bad positioned matures\n")
+            summaryfile.write("\n")
+            summaryfile.write("---------------------------flipped/changed precursors ----------------------------\n")
 
-        if len(listofnew)>0:
-            for k in range(0,len(listofnew)):
-                if k%2==0:
-                    tempsplit=listofnew[k].split()
-                    summaryfile.write(str(tempsplit[1].strip())+"\n")
-        else:
-            summaryfile.write("--->NO flipped/changed precursors\n")
-        summaryfile.write("\n")
-        summaryfile.write("---------------------------flipped/changed precursors; inloop ----------------------------\n")
+            if len(listofnew)>0:
+                for k in range(0,len(listofnew)):
+                    if k%2==0:
+                        tempsplit=listofnew[k].split()
+                        summaryfile.write(str(tempsplit[1].strip())+"\n")
+            else:
+                summaryfile.write("--->NO flipped/changed precursors\n")
+            summaryfile.write("\n")
+            summaryfile.write("---------------------------flipped/changed precursors; inloop ----------------------------\n")
 
-        if len(listofnewloop)>0:
-            for k in range(0,len(listofnewloop)):
-                if k%2==0:
-                    tempsplit=listofnewloop[k].split()
-                    summaryfile.write(str(tempsplit[1].strip())+"\n")
-        else:
-            summaryfile.write("---> NO flipped/changed precursors; inloop\n")
-        summaryfile.write("\n")
+            if len(listofnewloop)>0:
+                for k in range(0,len(listofnewloop)):
+                    if k%2==0:
+                        tempsplit=listofnewloop[k].split()
+                        summaryfile.write(str(tempsplit[1].strip())+"\n")
+            else:
+                summaryfile.write("---> NO flipped/changed precursors; inloop\n")
+            summaryfile.write("\n")
 
-        summaryfile.write("---------------------------Flipped/changed precursors don't fit with the final alignment (changed back to original)----------------------------\n")
-        if len(listcorrected)>0:
-            for k in (listcorrected):
-                summaryfile.write(k.strip()+"\n")
-        else:
-            summaryfile.write("--->None of the changed/flipped precursors was changed back to original\n")
-
-        summaryfile.write("\n")
-
-        if len(listcorrectedori)>0:
-            summaryfile.write("---------------------------Original precursors, Change at the Alignment level (to fit the alignment----------------------------\n")
-            for k in (listcorrectedori):
-                summaryfile.write(k.strip()+"\n")
-
-        summaryfile.write("\n")
-        summaryfile.write("---------------------------Precursors without annotated mature----------------------------:\n")
-
-        if len(listnomat)>0:
-            summaryfile.write("#Precursors without annotated mature; Successfully predicted mature---------------------------\n")
-            tempcountsucnomat=0
-            for k in range(0,len(listnomat)):
-                if listnomat[k] not in listnomatbroken and listnomat[k] not in listnomatscore:
-                    tempcountsucnomat=tempcountsucnomat+1
-                    summaryfile.write(str(listnomat[k].strip())+"\n")
-
-            if tempcountsucnomat==0:
-                summaryfile.write("---> NO Precursors without annotated mature; Successfully predicted mature\n")
+            summaryfile.write("---------------------------Flipped/changed precursors don't fit with the final alignment (changed back to original)----------------------------\n")
+            if len(listcorrected)>0:
+                for k in (listcorrected):
+                    summaryfile.write(k.strip()+"\n")
+            else:
+                summaryfile.write("--->None of the changed/flipped precursors was changed back to original\n")
 
             summaryfile.write("\n")
-            summaryfile.write("#Precursors without annotated mature; bad positioned predicted mature---------------------------\n")
 
-            if len(listnomatbroken)>0:
-                for k in listnomatbroken:
-                    summaryfile.write(k+"\n")
-
-            else:
-                summaryfile.write("--->NO Precursors without annotated mature; bad positioned predicted mature:\n")
+            if len(listcorrectedori)>0:
+                summaryfile.write("---------------------------Original precursors, Change at the Alignment level (to fit the alignment----------------------------\n")
+                for k in (listcorrectedori):
+                    summaryfile.write(k.strip()+"\n")
 
             summaryfile.write("\n")
-            summaryfile.write("#Precursors without annotated mature; no similar mature---------------------------\n")
+            summaryfile.write("---------------------------Precursors without annotated mature----------------------------:\n")
 
-            if len(listnomatscore)>0:
-                for k in listnomatscore:
-                    summaryfile.write(k+"\n")
+            if len(listnomat)>0:
+                summaryfile.write("#Precursors without annotated mature; Successfully predicted mature---------------------------\n")
+                tempcountsucnomat=0
+                for k in range(0,len(listnomat)):
+                    if listnomat[k] not in listnomatbroken and listnomat[k] not in listnomatscore:
+                        tempcountsucnomat=tempcountsucnomat+1
+                        summaryfile.write(str(listnomat[k].strip())+"\n")
+
+                if tempcountsucnomat==0:
+                    summaryfile.write("---> NO Precursors without annotated mature; Successfully predicted mature\n")
+
+                summaryfile.write("\n")
+                summaryfile.write("#Precursors without annotated mature; bad positioned predicted mature---------------------------\n")
+
+                if len(listnomatbroken)>0:
+                    for k in listnomatbroken:
+                        summaryfile.write(k+"\n")
+
+                else:
+                    summaryfile.write("--->NO Precursors without annotated mature; bad positioned predicted mature:\n")
+
+                summaryfile.write("\n")
+                summaryfile.write("#Precursors without annotated mature; no similar mature---------------------------\n")
+
+                if len(listnomatscore)>0:
+                    for k in listnomatscore:
+                        summaryfile.write(k+"\n")
+
+                else:
+                    summaryfile.write("--->NO Precursors without annotated mature; no similar mature\n")
 
             else:
-                summaryfile.write("--->NO Precursors without annotated mature; no similar mature\n")
+                summaryfile.write("--->All precurssors have annotated matures\n")
 
-        else:
-            summaryfile.write("--->All precurssors have annotated matures\n")
+            summaryfile.write("\n")
+            summaryfile.write("---------------------------Original precursors totally removed ----------------------------\n")
 
-        summaryfile.write("\n")
-        summaryfile.write("---------------------------Original precursors totally removed ----------------------------\n")
+            if len(listofboth)>0:
+                for i in range(0,len(listofboth)):
+                    if i%2==0:
+                        tempsplit=listofboth[i].split()
+                        summaryfile.write(str(tempsplit[1].strip())+"\n")
 
-        if len(listofboth)>0:
-            for i in range(0,len(listofboth)):
-                if i%2==0:
-                    tempsplit=listofboth[i].split()
-                    summaryfile.write(str(tempsplit[1].strip())+"\n")
+            else:
+                summaryfile.write("---> NO Original precursors totally removed ----------------------------\n")
 
-        else:
-            summaryfile.write("---> NO Original precursors totally removed ----------------------------\n")
+            summaryfile.write("\n")
+            summaryfile.write("---------------------------Precursors without given genome file(s)----------------------------\n")
 
-        summaryfile.write("\n")
-        summaryfile.write("---------------------------Precursors without given genome file(s)----------------------------\n")
+            if len(listnogenomes)>0:
+                for i in listnogenomes:
+                    summaryfile.write(i.strip()+"\n")
 
-        if len(listnogenomes)>0:
-            for i in listnogenomes:
-                summaryfile.write(i.strip()+"\n")
+            else:
+                summaryfile.write("---> All the precursors have given genomes to search----------------------------\n")
 
-        else:
-            summaryfile.write("---> All the precursors have given genomes to search----------------------------\n")
+            summaryfile.write("\n")
+            summaryfile.write("---------------------------Precursors NOT found in their given genomes file(s)----------------------------\n")
 
-        summaryfile.write("\n")
-        summaryfile.write("---------------------------Precursors NOT found in their given genomes file(s)----------------------------\n")
+            if len(listnotingenome)>0:
+                for i in listnotingenome:
+                    summaryfile.write(i.strip()+"\n")
 
-        if len(listnotingenome)>0:
-            for i in listnotingenome:
-                summaryfile.write(i.strip()+"\n")
-
-        else:
-            summaryfile.write("--->All the precursors were found in their given genomes file(s)----------------------------\n")
+            else:
+                summaryfile.write("--->All the precursors were found in their given genomes file(s)----------------------------\n")
 
 
         #Total
@@ -4458,30 +4443,31 @@ def sublist(filename):
 
         pdf.savefig(outdir+filename.strip()+'statistics.pdf')
         plt.close('all')
-        summaryfile.write("---------------------------Results In Numbers----------------------------\n")
-        summaryfile.write("*Number of remained precursors= "+str(int((len(listofold)/2)+(len(list2mat)/3)))+"\n")
-        summaryfile.write("*Number of remained precursors with bad positioned matures= "+str(int((len(listofoldloop)/2)))+"\n")
-        summaryfile.write("*Number of flipped(changed) precursors= "+str(int((len(listofnew)/2)))+"\n")
-        summaryfile.write("*Number of flipped(changed) precursors with bad positioned matures= "+str(int((len(listofnewloop)/2)))+"\n")
-        summaryfile.write("*Number of removed precursors= "+str(int(len(listofboth)/2))+"\n")
-        summaryfile.write("*Number of precursors without a given matures= "+str(int(len(listnomat)))+"\n")
-        summaryfile.write("*Number of precursors with successfully predicted matures= "+str(int(len(listnomat)-len(listremovedbroken)-len(listremovedscore)))+"\n")
-        summaryfile.write("*Number of precursors without a given genome file= "+str(int(len(listnogenomes)))+"\n")
-        summaryfile.write("*Number of precursors not found in their given genomes= "+str(int(len(listnotingenome)))+"\n")
-        summaryfile.write("---------------------------Numbers Used For The Graph----------------------------\n")
-        summaryfile.write("Total number of sequences="+str(int(TotalnumberofSequences))+"\n")
-        summaryfile.write("Processed="+str(int(Processed))+"\n")
-        summaryfile.write("Removed="+str(int(Removed))+"\n")
-        summaryfile.write("Predicted="+str(int(predicted))+"\n")
-        summaryfile.write("without given mature/no predicted mature="+str(int(noprediction))+"\n")
-        summaryfile.write("Changed(flipped)="+str(int(flippednotcorrected))+"\n")
-        summaryfile.write("Misaligned (shifted) precursors corrected at the end="+str(int(flippedcorrected))+"\n")
-        summaryfile.write("Number of precursors without annotated mature(s)="+str(int(with0mats))+"\n")
-        summaryfile.write("Number of precursors with one annotated mature="+str(int(with1mats)-int(with0mats))+"\n")
-        summaryfile.write("Number of precursors with two annotated matures="+str(int(with2mats))+"\n")
-        summaryfile.write("Old Entropy="+str(oldshanon)+"\n")
-        summaryfile.write("New Entropy="+str(newshanon)+"\n")
-        summaryfile.close()
+        with open(outdir+filename.strip()+"-summ.txt","a") as summaryfile:
+            summaryfile.write("---------------------------Results In Numbers----------------------------\n")
+            summaryfile.write("*Number of remained precursors= "+str(int((len(listofold)/2)+(len(list2mat)/3)))+"\n")
+            summaryfile.write("*Number of remained precursors with bad positioned matures= "+str(int((len(listofoldloop)/2)))+"\n")
+            summaryfile.write("*Number of flipped(changed) precursors= "+str(int((len(listofnew)/2)))+"\n")
+            summaryfile.write("*Number of flipped(changed) precursors with bad positioned matures= "+str(int((len(listofnewloop)/2)))+"\n")
+            summaryfile.write("*Number of removed precursors= "+str(int(len(listofboth)/2))+"\n")
+            summaryfile.write("*Number of precursors without a given matures= "+str(int(len(listnomat)))+"\n")
+            summaryfile.write("*Number of precursors with successfully predicted matures= "+str(int(len(listnomat)-len(listremovedbroken)-len(listremovedscore)))+"\n")
+            summaryfile.write("*Number of precursors without a given genome file= "+str(int(len(listnogenomes)))+"\n")
+            summaryfile.write("*Number of precursors not found in their given genomes= "+str(int(len(listnotingenome)))+"\n")
+            summaryfile.write("---------------------------Numbers Used For The Graph----------------------------\n")
+            summaryfile.write("Total number of sequences="+str(int(TotalnumberofSequences))+"\n")
+            summaryfile.write("Processed="+str(int(Processed))+"\n")
+            summaryfile.write("Removed="+str(int(Removed))+"\n")
+            summaryfile.write("Predicted="+str(int(predicted))+"\n")
+            summaryfile.write("without given mature/no predicted mature="+str(int(noprediction))+"\n")
+            summaryfile.write("Changed(flipped)="+str(int(flippednotcorrected))+"\n")
+            summaryfile.write("Misaligned (shifted) precursors corrected at the end="+str(int(flippedcorrected))+"\n")
+            summaryfile.write("Number of precursors without annotated mature(s)="+str(int(with0mats))+"\n")
+            summaryfile.write("Number of precursors with one annotated mature="+str(int(with1mats)-int(with0mats))+"\n")
+            summaryfile.write("Number of precursors with two annotated matures="+str(int(with2mats))+"\n")
+            summaryfile.write("Old Entropy="+str(oldshanon)+"\n")
+            summaryfile.write("New Entropy="+str(newshanon)+"\n")
+            summaryfile.close()
 
         listofoldloopjson=[]
         for k in range(0,len(listofoldloop)):
@@ -4671,6 +4657,7 @@ if __name__ == '__main__':
         global args
         args = parseargs()
         log = setup_multiprocess_logger(name=logid, log_file='logs/'+scriptname, logformat='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M', level=args.loglevel)
+        streamlog = setup_multiprocess_logger(name='', log_file='stderr', logformat='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M', level=args.loglevel)
 
         log.info(logid+'Running '+scriptname+' on '+str(args.cores)+' cores.')
         log.info(logid+'CLI: '+str(sys.argv[0]) + ' '.join( [shlex.quote(s) for s in sys.argv[1:]] ))
@@ -4688,7 +4675,7 @@ if __name__ == '__main__':
 
         pool = multiprocessing.Pool(processes=nthreads, maxtasksperchild=1)
 
-        find_executable('clustalw2') or sys.exit('Please install clustalw2 to run this')
+        #find_executable('clustalw2') or sys.exit('Please install clustalw2 to run this')
         find_executable('dialign2-2') or sys.exit('Please install dialign2-2 to run this')
 
         for fam in lfams:
