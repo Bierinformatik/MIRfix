@@ -11,7 +11,7 @@ echo "Running MIRfix with ${cores} cores, ${extension}nt extension at ${location
 cp $location/${test}_mature_original.fa $location/${test}_maturetest.fa
 cp $location/${test}.mapping_original.txt $location/${test}.mappingtest.txt
 
-python3 MIRfix.py3 -j ${cores} -o ${location}/Test_Cristian_output/ -i ${location}/Families/ -f ${location}/${test}_list.txt -g ${location}/${test}_genomes_list.txt -m ${location}/${test}.mappingtest.txt -a ${location}/${test}_maturetest.fa -e ${extension}
+python3 MIRfix.py3 -j ${cores} -o ${location}/Test_Cristian_output/ -i ${location}/Families/ -f ${location}/${test}_list.txt -g ${location}/${test}_genomes_list.txt -m ${location}/${test}.mappingtest.txt -a ${location}/${test}_maturetest.fa -e ${extension} --loglevel DEBUG
 
 #python2 MIRfix.py ${cores} ${location}/output/ ${location}/Families/ ${location}/${test}_list.txt ${location}/${test}_genomes_list.txt ${location}/${test}.mappingtest.txt ${location}/${test}_maturetest.fa ${extension}
 
