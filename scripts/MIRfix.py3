@@ -3819,6 +3819,8 @@ def sublist(filename):
                     star=False
                     nstar=False
                     curmatID=linesplit[4]
+                    curmatseq=None
+                    curmatstar=None
                     startmat=0
                     endmat=0
                     startmatstar=0
@@ -3857,6 +3859,8 @@ def sublist(filename):
                                 curmatstar=str(starrec.seq)
                                 star=True
                                 break
+                            else:
+                                log.debug(logid+'Searching for curmatstar with '+' '.join([curmatID.strip(), starrecID.strip(), starrec.description]) )
 
                     if not curmatstar:
                         log.error(logid+'Not possible to define curmatstar for '+str(matfile)+' and '+str(outdir+filename.strip()+"-mirstar.fa"))
@@ -4669,7 +4673,7 @@ if __name__ == '__main__':
         log = setup_multiprocess_logger(name=logid, log_file='logs/'+scriptname, logformat='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M', level=args.loglevel)
 
         log.info(logid+'Running '+scriptname+' on '+str(args.cores)+' cores.')
-        log.info(logid+'CLI: '+sys.argv[0], ' '.join( [shlex.quote(s) for s in sys.argv[1:]] ))
+        log.info(logid+'CLI: '+str(sys.argv[0]) + ' '.join( [shlex.quote(s) for s in sys.argv[1:]] ))
 
         nthreads=args.cores
         filelist=open(args.families,'r') if not '.gz' in args.families else gzip.open(args.families,'r')
