@@ -4602,7 +4602,7 @@ def sublist(filename):
 
 def openfile(f):
     try:
-        return open(f,'r') if not '.gz' in f[-4:] else gzip.open(f,'rb')
+        return open(f,'r') if not '.gz' in f[-4:] else gzip.open(f,'r')
     except Exception as err:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
