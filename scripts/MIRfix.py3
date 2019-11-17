@@ -3571,7 +3571,7 @@ def sublist(filename):
                                 fspos=0
                             elif xcutseq>10 and (xcut>50 or xcut<0):
                                 fspos=mspos-10
-                            elif xcutseq<=10 and (xcut50 or xcut<0):
+                            elif xcutseq<=10 and (xcut>50 or xcut<0):
                                 fspos=0
 
                             if ycutseq>=ycut and ycut>=0 and ycut<=50:
@@ -3580,7 +3580,7 @@ def sublist(filename):
                                 fepos=len(pseq)
                             elif ycutseq>10 and (ycut>50 or ycut<0):
                                 fepos=mepos+11
-                            elif ycutseq<=10 and (ycut50 or ycut<0):
+                            elif ycutseq<=10 and (ycut>50 or ycut<0):
                                 fepos=len(pseq)
 
                             #cutpseq=pseq[fspos:fepos]
