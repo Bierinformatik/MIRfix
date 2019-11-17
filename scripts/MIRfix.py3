@@ -40,6 +40,7 @@ from Bio.Align.Applications import ClustalwCommandline
 import RNA
 
 def getindex(sequence,specie,precID,precdesc,listnogenomes,listnotingenome,templong):#get the index of the original sequence in its genome
+    logid = scriptname+'.getindex: '
     try:
         specieitem=specie.split()
         listofgenomes=[]
@@ -138,6 +139,7 @@ def getindex(sequence,specie,precID,precdesc,listnogenomes,listnotingenome,templ
 
 
 def getindex2mat(sequence,specie,precID,precdesc,listnogenomes,listnotingenome):#get the index of the original sequence in its genome
+    logid = scriptname+'.getindex2mat: '
     try:
         specieitem=specie.split()
         listofgenomes=[]
@@ -221,6 +223,7 @@ def getindex2mat(sequence,specie,precID,precdesc,listnogenomes,listnotingenome):
 
 
 def flip(filename,filen,outdir,mappingfile,matfile,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,list2mat,listnogenomes,listnotingenome,templong,listgoodnew):#file name is the family name
+    logid = scriptname+'.flip: '
     try:
         item=[]
         item1=[]
@@ -362,6 +365,7 @@ def flip(filename,filen,outdir,mappingfile,matfile,listofnew,listofnewloop,listo
 
 
 def dofold(listnewold,oldid,precseq,newid,newseq):
+    logid = scriptname+'.dofold: '
     try:
         md = RNA.md()
         md.dangles = 2 #int(sys.argv[10]) if sys.argv[10] else 3   JF: DO NOT CHANGE
@@ -387,6 +391,7 @@ def dofold(listnewold,oldid,precseq,newid,newseq):
 
 
 def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos,matdesc,matseq,outdir,oldparts,finaloldcomp,precDes,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listgoodnew):
+    logid = scriptname+'.readfold: '
     try:
         log.debug(["readfold",listnewold])
         for i in range(0,len(listnewold)):
@@ -2040,6 +2045,7 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
 
 
 def comp_5p(ll, lr, sm, ss, precursor, run):
+    logid = scriptname+'.comp_5p: '
     try:
         log.debug(['comp5p', ll, lr, sm, ss, precursor, run])
         if run > 3:
@@ -2070,6 +2076,7 @@ def comp_5p(ll, lr, sm, ss, precursor, run):
 
 
 def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
+    logid = scriptname+'.getmirstar: '
     try:
         log.debug("get mirstar here 18")
         mirflag=False
@@ -2194,6 +2201,7 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
 
 
 def getmirstarbak(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
+    logid = scriptname+'.getmirstarbak: '
     try:
         log.debug("get mirstar here 18")
         mirflag=False
@@ -2331,6 +2339,7 @@ def getmirstarbak(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
 
 
 def foldnomat(inputfasta,outputfasta):#fold the new and the old sequences, using temp file every time I get the new sequence from the original
+    logid = scriptname+'.foldnomat: '
     try:
         f=os.popen("RNAfold -d3 --noPS --noLP <"+inputfasta)
         fi=f.read()
@@ -2347,6 +2356,7 @@ def foldnomat(inputfasta,outputfasta):#fold the new and the old sequences, using
 
 
 def alignTostock(align):
+    logid = scriptname+'.alignTostock: '
     try:
         reads=openfile(align)
         stkfile=align+".stk"
@@ -2411,6 +2421,7 @@ def alignTostock(align):
 
 
 def predict(align,matId,newmatID,matfile,filename,precdescrip,mapfile,directory,listremovedbroken,listremovedscore):
+    logid = scriptname+'.predict: '
     try:
         if directory[-1]!="/":# to work in both cases, user puts / at the end of the directory or not
             directory=str(directory)+"/"
@@ -2513,6 +2524,7 @@ def predict(align,matId,newmatID,matfile,filename,precdescrip,mapfile,directory,
 
 
 def checknomat(precfile,mapfile,matfile,directory,precfilename,listremovedbroken,listremovedscore,nomats,listnomat):
+    logid = scriptname+'.checknomat: '
     try:
         flagnomatexists=False
         if directory[-1]!="/":# to work in both cases, user puts / at the end of the directory or not
@@ -2650,6 +2662,7 @@ def checknomat(precfile,mapfile,matfile,directory,precfilename,listremovedbroken
 
 
 def getfilename(dirfile):#to get the name of the file without directory or extension, in principal was used to get famname
+    logid = scriptname+'.getfilename: '
     try:
         if '/' in dirfile and "." in dirfile:
             dirf=dirfile[dirfile.rfind('/')+1:]
@@ -2670,6 +2683,7 @@ def getfilename(dirfile):#to get the name of the file without directory or exten
 
 
 def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predictedepos):
+    logid = scriptname+'.readfoldpredict: '
     try:
         fofi = openfile(foldfile)
         for line in SeqIO.parse(fofi,"fasta"):
@@ -2995,6 +3009,7 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
 
 
 def doalifold(alnfile,outdir):
+    logid = scriptname+'.doalifold: '
     try:
         f=os.popen("RNAalifold --noPS "+alnfile)
         alifoldtemp=outdir+'alifoldtemp.txt'
@@ -3012,6 +3027,7 @@ def doalifold(alnfile,outdir):
 
 
 def getstructure(alifoldtemp):
+    logid = scriptname+'.getstructure: '
     try:
         for line in (openfile(alifoldtemp)):
             item=line.split()
@@ -3028,6 +3044,7 @@ def getstructure(alifoldtemp):
 
 
 def cal_ent(s):
+    logid = scriptname+'.cal_ent: '
     try:
         listofchars=[0,0,0,0,0]
 
@@ -3106,6 +3123,7 @@ def cal_ent(s):
 
 
 def CalShanon(stkfile):
+    logid = scriptname+'.CalShanon: '
     try:
         aligEnt=0
         nameOffile=stkfile
@@ -3153,6 +3171,7 @@ def CalShanon(stkfile):
 
 
 def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofnewloop,listoldstatus,templong,listmisalignedcorr,listcorrected,listcorrectedori,listgoodnew):
+    logid = scriptname+'.correct: '
     try:
         log.debug("def correct")
         listidsnewnewloop=[]
@@ -3265,6 +3284,7 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
         log.error(logid+''.join(tbe.format()))
 
 def sublist(filename):
+    logid = scriptname+'.sublist: '
     try:
         filesdir=str(args.famdir)
         command="list"
@@ -3818,22 +3838,28 @@ def sublist(filename):
                     indexlongmat=int(templong.index(resprecid.strip()))
                     longseq=str(templong[indexlongmat+1]).replace('T','U')
 
-                    mtf = openfile(matfile)
-                    for reco in SeqIO.parse(mtf, 'fasta'):
-                        splitreco=reco.description.split()
-                        if curmatID == splitreco[1]:
-                            curmatseq=str(reco.seq)
-                            nstar=True
-                            break
+                    with openfile(matfile) as mtf:
+                        for reco in SeqIO.parse(mtf, 'fasta'):
+                            splitreco=reco.description.split()
+                            if curmatID == splitreco[1]:
+                                curmatseq=str(reco.seq)
+                                nstar=True
+                                break
 
-                    for starrec in SeqIO.parse(openfile(outdir+filename.strip()+"-mirstar.fa"),'fasta'):
-                        curmatsplit=(starrec.description).split()
-                        curmatsplit1=(curmatsplit[1]).split('-')
-                        starrecID=curmatsplit1[0]
-                        if (curmatID).strip()==(starrecID).strip() and (resprecid.strip() in starrec.description):
-                            curmatstar=str(starrec.seq)
-                            star=True
-                            break
+                    log.debug(logid+'Curmatseq: '+str(curmatseq))
+
+                    with openfile(outdir+filename.strip()+"-mirstar.fa") as msfa:
+                        for starrec in SeqIO.parse(msfa,'fasta'):
+                            curmatsplit=(starrec.description).split()
+                            curmatsplit1=(curmatsplit[1]).split('-')
+                            starrecID=curmatsplit1[0]
+                            if (curmatID).strip()==(starrecID).strip() and (resprecid.strip() in starrec.description):
+                                curmatstar=str(starrec.seq)
+                                star=True
+                                break
+
+                    if not curmatstar:
+                        log.error(logid+'Not possible to define curmatstar for '+str(matfile)+' and '+str(outdir+filename.strip()+"-mirstar.fa"))
 
                     log.debug(["coor1temp",longseq,curmatseq])
                     coortemp1=int(longseq.index(curmatseq))
@@ -4601,6 +4627,7 @@ def sublist(filename):
 
 
 def openfile(f):
+    logid = scriptname+'.openfile: '
     try:
         return open(f,'r') if not '.gz' in f[-4:] else gzip.open(f,'rt')
     except Exception as err:
