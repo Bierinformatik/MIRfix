@@ -3367,14 +3367,12 @@ def sublist(filename):
         if ".fa" in filename:
             filen=filesdir+str(filename).strip()
             outdir=str(args.outdir)+filename.strip()+".out/"
-            f=os.popen("mkdir "+outdir)
-            f.close()
+            makeoutdir(outdir)
             familyfileres=open(outdir+filename.strip()+"-res.fa","a")
         else:
             filename=str(filename).strip()
             outdir=str(args.outdir)+filename.strip()+".out/"
-            f=os.popen("mkdir "+outdir)
-            f.close()
+            makeoutdir(outdir)
             familyfileres=open(outdir+filename.strip()+"-res.fa","a")
             filen=filesdir+str(filename.strip())+".fa"
 
