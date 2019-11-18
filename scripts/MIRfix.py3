@@ -2526,16 +2526,12 @@ def checknomat(precfile,mapfile,matfile,directory,precfilename,listremovedbroken
     logid = scriptname+'.checknomat: '
     try:
         flagnomatexists=False
-        if directory[-1]!="/":# to work in both cases, user puts / at the end of the directory or not
-            directory=str(directory)+"/"
-        else:
-            directory=directory
+        directory=os.path.abspath(directory)
         matIDs=[]
         precnomat=[]
         countnomat=0#count number of precs without mature
 
-        pf = openfile(precfile)
-        for record in SeqIO.parse(pf, 'fasta'):
+        for record in SeqIO.parse(openfile(precfile), 'fasta'):
             precAllID=record.description
             precID=record.id
             precseq=record.seq
@@ -2564,34 +2560,27 @@ def checknomat(precfile,mapfile,matfile,directory,precfilename,listremovedbroken
                 mtf = openfile(matfile)
                 for record in SeqIO.parse(mtf, 'fasta'):
                     if i.strip() in record.description:
-                        tempmaturefile=open(directory+'tempmat.fa','a')
-                        tempmaturefile.write(">"+record.description+"\n"+str(record.seq.strip())+"\n")
+                        with open(directory+'tempmat.fa','a') as tempmaturefile:
+                            tempmaturefile.write(">"+record.description+"\n"+str(record.seq.strip())+"\n")
 
-            tempmaturefile.close()
-            nomatfilefiller = openfile(directory+'nomat-'+precfilename+'.fa')
-            nomatfile=SeqIO.parse(nomatfilefiller,'fasta')
-            for prec in nomatfile:
+            for prec in SeqIO.parse(openfile(directory+'nomat-'+precfilename+'.fa'),'fasta'):
                 listofmat=[]
                 listofscore=[]
                 splitprecdisc=prec.description.split()#because the clustal reads only id, so it will only write in thr result the id without MI00....
                 prectempid=splitprecdisc[0]+"-"+splitprecdisc[1]
                 listnomat.append((splitprecdisc[1]).strip())
                 for mat in SeqIO.parse(openfile(directory+'tempmat.fa'),'fasta'):
-
-                    temptoalign=open(directory+'temptoalign.fa','w')
-
                     splitmatdisc=mat.description.split()
                     mattempid=splitmatdisc[0]+"-"+splitmatdisc[1]#because the clustal reads only id, so it will only write in thr result the id without MIMAT...
-                    temptoalign.write(">"+prectempid+"\n"+str(prec.seq)+"\n"+">"+mattempid+"\n"+str(mat.seq)+"\n")
-                    temptoalign.close()
+                    with open(directory+'temptoalign.fa','w') as temptoalign:
+                        temptoalign.write(">"+prectempid+"\n"+str(prec.seq)+"\n"+">"+mattempid+"\n"+str(mat.seq)+"\n")
                     infile=directory+'temptoalign.fa'
                     outfile=directory+'temptoalign.aln'
                     cline = ClustalwCommandline("clustalw", infile=infile, outfile=outfile)
 
                     stdout,stder=cline()
-                    fi=open(directory+'temptoalign.txt','w')
-                    fi.write(stdout)
-                    fi.close()
+                    with open(directory+'temptoalign.txt','w') as fi:
+                        fi.write(stdout)
 
                     for line in openfile(directory+'temptoalign.txt'):
                         if 'Sequence 2:' in line:
@@ -2633,14 +2622,14 @@ def checknomat(precfile,mapfile,matfile,directory,precfilename,listremovedbroken
 
                     listremovedbroken,listremovedscore=predict(tempoutfilepredict,matId,newmatID,matfile,filename,prec.description,mapfile,directory,listremovedbroken,listremovedscore)
                     stktemptopredict=tempoutfilepredict+".stk"
-                    f=os.popen("rm "+str(stktemptopredict))
+                    os.remove(str(stktemptopredict))
 
                 elif maxscore<21:
                     prectempsplit=prec.description.split()
                     log.debug(["if not score",prectempsplit[1]])
                     if prectempsplit[1] not in listremovedscore:
                         listremovedscore.append(prectempsplit[1].strip())
-            nomatfile.close()
+
         elif countnomat>0 and len(matIDs)==0:
             flagnomatexists=True
             nomats=-1
@@ -3285,11 +3274,11 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
 def sublist(filename):
     logid = scriptname+'.sublist: '
     try:
-        filesdir=str(args.famdir)
+        filesdir=str(args.famdir)#dir for families
         command="list"
-        mapfile=str(args.mapping)
-        matfile=str(args.mature)
-        matrdir=args.maturedir
+        mapfile=str(args.mapping)#mapping of mir to mirfam
+        matfile=str(args.mature)#mature sequences
+        matrdir=args.maturedir#directory for mature files
         tProcessed=0#all start with 't', are for the total of all families
         tRemoved=0
         tTotalnumberofSequences=0
@@ -3368,34 +3357,31 @@ def sublist(filename):
             filen=filesdir+filename
             outdir=str(args.outdir)+filename+".out/"
             makeoutdir(outdir)
-            familyfileres=open(outdir+filename+"-res.fa","a")
+            #familyfileres=open(outdir+filename+"-res.fa","a")
         else:
             filename=str(filename).strip()
             outdir=str(args.outdir)+filename+".out/"
             makeoutdir(outdir)
             filen=filesdir+filename+".fa"
-            familyfileres=open(outdir+filename+"-res.fa","a")
+            #familyfileres=open(outdir+filename+"-res.fa","a")
 
         OldShanon=0
         NewShanon=0
-        familyfileresfinal=open(outdir+filename.strip()+"-Final.fasta","a")
-        anchorcoorfile=open(outdir+filename.strip()+"-Final.anc","a")
+        #familyfileresfinal=open(outdir+filename.strip()+"-Final.fasta","a")
+        #anchorcoorfile=open(outdir+filename.strip()+"-Final.anc","a")
         tempcountsucnomat=0
         infile=""
         outfile=""
         infile=filen[:]
-        outfile=outdir+filename.strip()+"-tempshan.aln"
+        outfile=outdir+filename+"-tempshan.aln"
         clustaline = ClustalwCommandline("clustalw2", infile=infile, outfile=outfile)
         stdoutshan,stdershan=clustaline()
         alignTostock(outfile)
         OldShanon=CalShanon(outfile+'.stk')
-        log.debug(["OldShanon",OldShanon])
-        fshan=os.popen("rm "+outfile)
-        fshan.close()
-        fshan=os.popen("rm "+filesdir+filename.strip()+".dnd")
-        fshan.close()
-        fshan=os.popen("rm "+outfile+".stk")
-        fshan.close()
+        log.debug(logid+str(["OldShanon",OldShanon]))
+        os.remove(outfile)
+        os.remove(filesdir+filename+".dnd")
+        os.remove(outfile+".stk")
         infile=""
         outfile=""
         userflanking=int(args.extension)
@@ -3442,10 +3428,9 @@ def sublist(filename):
             os.remove(outdir+'nomat-'+filename+'.fa')
 
         flagnomatexists,nomats,listremovedbroken,listremovedscore,listnomat=checknomat(filen,mapfile,matfile,outdir,filename,listremovedbroken,listremovedscore,nomats,listnomat)
-        log.debug(logid+"test A")
 
         if flagnomatexists and nomats!=-1:
-            log.debug(logid+"flagmathere")
+            log.debug(logid+"flagnomatexists"+str(flagnomatexists)+';'+str(nomats))
             if os.path.isfile(outdir+filename.strip()+"-new.fa"):
                 os.remove(outdir+filename.strip()+"-new.fa")
 
@@ -3453,7 +3438,7 @@ def sublist(filename):
             log.debug(logid+str(["all removed",listnomatremoved]))
 
             if len(listnomatremoved)>0:
-                log.debug(logid+"all list")
+                log.debug(logid+"listnomatremoved"+str(listnomatremoved))
                 fl = openfile(filen)
                 for record in SeqIO.parse(fl, 'fasta'):
                     tempdes=record.description
@@ -3473,6 +3458,7 @@ def sublist(filename):
                 listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listnogenomes,listnotingenome,templong,listgoodnew=flip(filename.strip(),filen,outdir,mapfile,matfile,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,list2mat,listnogenomes,listnotingenome,templong,listgoodnew)
 
         elif flagnomatexists and nomats==-1:
+            log.debug(logid+"flagnomatexists"+str(flagnomatexists)+';'+str(nomats))
             with open(outdir+filename.strip()+"-summ.txt","a") as summaryfile:
                 summaryfile.write("no matures for the sequences and no related matures in the mapping file\n")
 
@@ -3480,37 +3466,37 @@ def sublist(filename):
             log.debug(logid+str(["this flip",flagnomatexists]))
             listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listnogenomes,listnotingenome,templong,listgoodnew=flip(filename.strip(),filen,outdir,mapfile,matfile,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,list2mat,listnogenomes,listnotingenome,templong,listgoodnew)#filename: filename/family, filen: the file itself(with the directory)
 
-        log.debug(logid+"test B")
+        log.debug(logid+"listofnew: "+str(listofnew))
         if os.path.isfile(outdir+filename+"-new.fa"):
             os.remove(outdir+filename+"-new.fa")
 
         if len(listofnew)>0:
             for i in range(0,len(listofnew)):
                 if i%2==0:
-                    log.debug(logid+"new")
-                    log.debug(logid+([">"+listofnew[i],listofnew[i+1]]))
-                    familyfileres.write(">"+str(listofnew[i])+"\n"+str(listofnew[i+1].replace('T','U'))+"\n")
+                    log.debug(logid+"new"+str([">"+listofnew[i],listofnew[i+1]]))
+                    with open(outdir+filename+"-res.fa","a") as familyfileres:
+                        familyfileres.write(">"+str(listofnew[i])+"\n"+str(listofnew[i+1].replace('T','U'))+"\n")
 
         if len(listofnewloop)>0:
             for i in range(0,len(listofnewloop)):
                 if i%2==0:
-                    log.debug(logid+"new loop")
-                    log.debug(logid+str([">"+listofnewloop[i],listofnewloop[i+1]]))
-                    familyfileres.write(">"+str(listofnewloop[i])+"\n"+str(listofnewloop[i+1].replace('T','U'))+"\n")
+                    log.debug(logid+"new loop"+str([">"+listofnewloop[i],listofnewloop[i+1]]))
+                    with open(outdir+filename+"-res.fa","a") as familyfileres:
+                        familyfileres.write(">"+str(listofnewloop[i])+"\n"+str(listofnewloop[i+1].replace('T','U'))+"\n")
 
         if len(listofold)>0:
             for i in range(0,len(listofold)):
                 if i%2==0:
-                    log.debug(logid+"old")
-                    log.debug(logid+([">"+listofold[i],listofold[i+1]]))
-                    familyfileres.write(">"+str(listofold[i])+"\n"+str(listofold[i+1].replace('T','U'))+"\n")
+                    log.debug(logid+"old"+str([">"+listofold[i],listofold[i+1]]))
+                    with open(outdir+filename+"-res.fa","a") as familyfileres:
+                        familyfileres.write(">"+str(listofold[i])+"\n"+str(listofold[i+1].replace('T','U'))+"\n")
 
         if len(listofoldloop)>0:
             for i in range(0,len(listofoldloop)):
                 if i%2==0:
-                    log.debug(logid+"old loop")
-                    log.debug(logid+str([">"+listofoldloop[i],listofoldloop[i+1]]))
-                    familyfileres.write(">"+str(listofoldloop[i])+"\n"+str(listofoldloop[i+1].replace('T','U'))+"\n")
+                    log.debug(logid+"old loop"+str([">"+listofoldloop[i],listofoldloop[i+1]]))
+                    with open(outdir+filename+"-res.fa","a") as familyfileres:
+                        familyfileres.write(">"+str(listofoldloop[i])+"\n"+str(listofoldloop[i+1].replace('T','U'))+"\n")
 
         listnomatbroken=listremovedbroken
         listnomatscore=listremovedscore
@@ -3531,7 +3517,6 @@ def sublist(filename):
                     precDes=record.description
                     precitem=precDes.split()
                     specie=precitem[2].strip()+" "+precitem[3]
-                    #ALI CHECK THIS
                     mspos=None
                     mepos=None
                     mspos=pseq.find(fmatseq)
@@ -3548,8 +3533,7 @@ def sublist(filename):
                     if precID==pid:
                         long2matseq=""
                         long2matseq,listnogenomes,listnotingenome=getindex2mat(pseq.replace("U","T"),specie,precID,precDes,listnogenomes,listnotingenome)  # from here on we have the reverse complement if seq on minus strand
-                        log.debug("here get")
-                        log.debug(long2matseq)
+                        log.debug(logid+'long2matseq: '+str(long2matseq))
 
                         if long2matseq!="":
                             if xcut>=0 and xcut<=50:
@@ -3564,8 +3548,10 @@ def sublist(filename):
 
                             #cutpseq=long2matseq[fspos:fepos+1]
                             cutpseq=long2matseq[fspos:fepos+len(ematseq)]
-                            familyfileres.write(">"+str(record.description)+"\n"+str(cutpseq).replace('T','U')+"\n")
-                            familyfileresfinal.write(">"+str(record.description)+"\n"+str(cutpseq).replace('T','U')+"\n")
+                            with open(outdir+filename+"-res.fa","a") as familyfileres:
+                                familyfileres.write(">"+str(record.description)+"\n"+str(cutpseq).replace('T','U')+"\n")
+                            with open(outdir+filename.strip()+"-Final.fasta","a") as familyfileresfinal:
+                                familyfileresfinal.write(">"+str(record.description)+"\n"+str(cutpseq).replace('T','U')+"\n")
 
                         elif long2matseq=="":
                             if xcutseq>=xcut and xcut>=0 and xcut<=50:
@@ -3588,10 +3574,12 @@ def sublist(filename):
 
                             #cutpseq=pseq[fspos:fepos]
                             cutpseq=pseq[fspos:fepos+len(ematseq)]
-                            familyfileres.write(">"+str(record.description)+"\n"+str(cutpseq).replace('T','U')+"\n")
-                            familyfileresfinal.write(">"+str(record.description)+"\n"+str(cutpseq).replace('T','U')+"\n")
+                            with open(outdir+filename+"-res.fa","a") as familyfileres:
+                                familyfileres.write(">"+str(record.description)+"\n"+str(cutpseq).replace('T','U')+"\n")
+                            with open(outdir+filename.strip()+"-Final.fasta","a") as familyfileresfinal:
+                                familyfileresfinal.write(">"+str(record.description)+"\n"+str(cutpseq).replace('T','U')+"\n")
 
-        familyfileres.close()
+        #familyfileres.close()
 
         if len(listofmirstar)>0:
             mirstarfile=open(outdir+filename.strip()+"-mirstar.fa","a")
@@ -3640,13 +3628,13 @@ def sublist(filename):
                             startmat=int(mat2seq.find(curmatseq))
                             endmat=startmat+len(curmatseq)-1
                             first = 'Found'
-                            log.debug(["heres new",mat2seq,startmat,endmat,curmatseq])
+                            log.debug(logid+str(["heres new",mat2seq,startmat,endmat,curmatseq]))
 
                         if lastmat.strip() in record.description:
                             startmatstar=int(mat2seq.find(curmatseq))
                             endmatstar=startmatstar+len(curmatseq)-1
                             second = 'Found'
-                            log.debug(["heres new",startmatstar,endmatstar,curmatseq])
+                            log.debug(logid+str(["heres new",startmatstar,endmatstar,curmatseq]))
 
                         if first and second:
                             coorflag=1
@@ -3704,7 +3692,7 @@ def sublist(filename):
                         curmatseq=curmatstar[:]
                         curmatstar=tempseqex[:]
 
-                    log.debug(["no long",coortemp1,coortemp2,curmatseq,curmatstar])
+                    log.debug(logid+str(["no long",coortemp1,coortemp2,curmatseq,curmatstar]))
 
                     startmattemp=int(mat1seq.index(curmatseq))
 
@@ -3718,8 +3706,8 @@ def sublist(filename):
                     endmat=startmat+len(curmatseq)-1
                     tempseq=mat1seq[startfinalseq:]
 
-                    log.debug(["curmat not",mat1seq,curmatseq])#,longseq)
-                    log.debug(['coor not',startmat,endmat])
+                    log.debug(logid+str(["curmat not",mat1seq,curmatseq]))
+                    log.debug(logid+str(['coor not',startmat,endmat]))
 
                     if star:
                         startmatstar=int(tempseq.find(curmatstar))
@@ -3732,7 +3720,7 @@ def sublist(filename):
                             endfinalseq=endmatstar+userflanking
                             finalseq=tempseq[0:endfinalseq+1]
 
-                        log.debug(['coor star not',startmatstar,endmatstar,finalseq])#,startmatstarlong,endmatstarlong
+                        log.debug(logid+str(['coor star not',startmatstar,endmatstar,finalseq]))#,startmatstarlong,endmatstarlong)
 
                     if star and nstar and  startmatstar!=-1 and endmatstar!=-1 and startmatstar>endmat:
                         list1matcoor.append(curmatID.strip())#mat original
@@ -3741,7 +3729,8 @@ def sublist(filename):
                         list1matcoor.append(endmat)
                         list1matcoor.append(startmatstar)
                         list1matcoor.append(endmatstar)
-                        familyfileresfinal.write(">"+resprecdesc+"\n"+finalseq+"\n")
+                        with open(outdir+filename.strip()+"-Final.fasta","a") as familyfileresfinal:
+                            familyfileresfinal.write(">"+resprecdesc+"\n"+finalseq+"\n")
                         startmat=0
                         endmat=0
                         startmatstar=0
@@ -3754,7 +3743,8 @@ def sublist(filename):
                         list1matcoor.append(endmatstar)
                         list1matcoor.append(startmat)
                         list1matcoor.append(endmat)
-                        familyfileresfinal.write(">"+resprecdesc+"\n"+finalseq+"\n")
+                        with open(outdir+filename.strip()+"-Final.fasta","a") as familyfileresfinal:
+                            familyfileresfinal.write(">"+resprecdesc+"\n"+finalseq+"\n")
                         startmat=0
                         endmat=0
                         startmatstar=0
@@ -3773,7 +3763,8 @@ def sublist(filename):
                         list1matcoor.append(endmat)
                         list1matcoor.append(startmatstar)
                         list1matcoor.append(endmatstar)
-                        familyfileresfinal.write(">"+resprecdesc+"\n"+finalseq+"\n")
+                        with open(outdir+filename.strip()+"-Final.fasta","a") as familyfileresfinal:
+                            familyfileresfinal.write(">"+resprecdesc+"\n"+finalseq+"\n")
                         startmat=0
                         endmat=0
                         startmatstar=0
@@ -3838,7 +3829,7 @@ def sublist(filename):
                             curmatsplit=(starrec.description).split()
                             curmatsplit1=(curmatsplit[1]).split('-')
                             starrecID=curmatsplit1[0]
-                            if (curmatID).strip()==(starrecID).strip() and (resprecid.strip() in starrec.description):
+                            if (curmatID).strip()==(starrecID).strip() or (curmatID).strip()+'/' in (starrecID).strip()and (resprecid.strip() in starrec.description):
                                 curmatstar=str(starrec.seq)
                                 star=True
                                 break
@@ -3882,7 +3873,8 @@ def sublist(filename):
                         list1matcoor.append(endmat)
                         list1matcoor.append(startmatstar)
                         list1matcoor.append(endmatstar)
-                        familyfileresfinal.write(">"+resprecdesc+"\n"+finalseq+"\n")
+                        with open(outdir+filename.strip()+"-Final.fasta","a") as familyfileresfinal:
+                            familyfileresfinal.write(">"+resprecdesc+"\n"+finalseq+"\n")
                         startmat=0
                         endmat=0
                         startmatstar=0
@@ -3896,7 +3888,8 @@ def sublist(filename):
                         list1matcoor.append(endmatstar)
                         list1matcoor.append(startmat)
                         list1matcoor.append(endmat)
-                        familyfileresfinal.write(">"+resprecdesc+"\n"+finalseq+"\n")
+                        with open(outdir+filename.strip()+"-Final.fasta","a") as familyfileresfinal:
+                            familyfileresfinal.write(">"+resprecdesc+"\n"+finalseq+"\n")
                         startmat=0
                         endmat=0
                         startmatstar=0
@@ -3915,7 +3908,8 @@ def sublist(filename):
                         list1matcoor.append(endmat)
                         list1matcoor.append(startmatstar)
                         list1matcoor.append(endmatstar)
-                        familyfileresfinal.write(">"+resprecdesc+"\n"+finalseq+"\n")
+                        with open(outdir+filename.strip()+"-Final.fasta","a") as familyfileresfinal:
+                            familyfileresfinal.write(">"+resprecdesc+"\n"+finalseq+"\n")
                         startmat=0
                         endmat=0
                         startmatstar=0
@@ -3940,7 +3934,7 @@ def sublist(filename):
                         endmatstar=0
                         break
 
-        familyfileresfinal.close()
+        #familyfileresfinal.close()
         log.debug([len(list2matcoor), len(list1matcoor), list2matcoor, list1matcoor])
         listmatcoor=list2matcoor+list1matcoor
 
@@ -3954,8 +3948,9 @@ def sublist(filename):
             r=0
 
             for n in range(mk+1,int(len(listmatcoor)/7)+1):
-                anchorcoorfile.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+3])+" "+str(listmatcoor[mi+10+r])+" "+str(22)+" "+str(1)+"\n")
-                anchorcoorfile.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+5])+" "+str(listmatcoor[mi+12+r])+" "+str(22)+" "+str(1)+"\n")
+                with open(outdir+filename.strip()+"-Final.anc","a") as anchorcoorfile:
+                    anchorcoorfile.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+3])+" "+str(listmatcoor[mi+10+r])+" "+str(22)+" "+str(1)+"\n")
+                    anchorcoorfile.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+5])+" "+str(listmatcoor[mi+12+r])+" "+str(22)+" "+str(1)+"\n")
                 r=r+7
 
             mi=mi+7
@@ -4098,7 +4093,7 @@ def sublist(filename):
 
             mirstarcorrectedfile.close()
 
-            anchorcoorfilecorrected=open(outdir+filename.strip()+"-corrected.anc","a")
+            #anchorcoorfilecorrected=open(outdir+filename.strip()+"-corrected.anc","a")
             log.debug(["here listmatcoor 3 ",listmatcoor])
             mi=0
             mk=0
@@ -4106,14 +4101,15 @@ def sublist(filename):
                 mk=mk+1
                 r=0
                 for n in range(mk+1,int(len(listmatcoor)/7)+1):
-                    anchorcoorfilecorrected.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+3])+" "+str(listmatcoor[mi+10+r])+" "+str(22)+" "+str(1)+"\n")
-                    anchorcoorfilecorrected.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+5])+" "+str(listmatcoor[mi+12+r])+" "+str(22)+" "+str(1)+"\n")
+                    with open(outdir+filename.strip()+"-corrected.anc","a") as anchorcoorfilecorrected:
+                        anchorcoorfilecorrected.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+3])+" "+str(listmatcoor[mi+10+r])+" "+str(22)+" "+str(1)+"\n")
+                        anchorcoorfilecorrected.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+5])+" "+str(listmatcoor[mi+12+r])+" "+str(22)+" "+str(1)+"\n")
                     r=r+7
 
                 mi=mi+7
 
             maxidesc=0
-            anchorcoorfilecorrected.close()
+            #anchorcoorfilecorrected.close()
             finalstkcorrected=open(outdir+filename.strip()+'corrected.stk','a')
             finalstkcorrected.write('# STOCKHOLM 1.0\n')
             if matrdir:
@@ -4663,11 +4659,11 @@ if __name__ == '__main__':
         log.info(logid+'CLI: '+str(sys.argv[0]) + ' '.join( [shlex.quote(s) for s in sys.argv[1:]] ))
 
         nthreads=args.cores
-        filelist=open(args.families,'r') if not '.gz' in args.families else gzip.open(args.families,'r')
         lfams = []
-        for line in filelist:
-            lfams.append(line.strip())
-        filelist.close()
+
+        with openfile(args.families) as filelist:
+            for line in filelist:
+                lfams.append(line.strip())
 
         log.debug(logid+'Families to process: '+str(lfams))
 
