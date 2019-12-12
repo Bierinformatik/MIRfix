@@ -67,7 +67,7 @@ def getindex(sequence,specie,precID,precdesc,listnogenomes,listnotingenome,templ
                     if "U" in str(i.seq).upper() and  "T" in str(i.seq).upper() :
                         mixed=True
                     precind = None
-                    precind = str(i.seq).index(sequence)
+                    precind = str(i.seq).find(sequence)
 
                     if precind > 0:
                         log.debug(["in genome",precID])
@@ -97,7 +97,7 @@ def getindex(sequence,specie,precID,precdesc,listnogenomes,listnotingenome,templ
                         #precind = str(i.seq).find(str(Seq(sequence).reverse_complement()))
                         #if "U" in str(i.seq).upper() and  "T" in str(i.seq).upper() :
                         if not mixed:
-                            precind =  str((i.seq).reverse_complement()).index(sequence) #minus strand
+                            precind =  str((i.seq).reverse_complement()).find(sequence) #minus strand
                             if precind > 0:
                                 log.debug(["in minus genome",precID])
                                 flagseq=1
@@ -166,7 +166,7 @@ def getindex2mat(sequence,specie,precID,precdesc,listnogenomes,listnotingenome):
                     if "U" in str(i.seq).upper() and  "T" in str(i.seq).upper() :
                         mixed=True
                     precind = None
-                    precind = str(i.seq).index(sequence)
+                    precind = str(i.seq).find(sequence)
 
                     if precind > 0:
                         log.debug(["in genome",precID])
@@ -188,7 +188,7 @@ def getindex2mat(sequence,specie,precID,precdesc,listnogenomes,listnotingenome):
                     else:       # We search for the reverse complement now
                         #precind = str(i.seq).find(str(Seq(sequence).reverse_complement()))
                         if not mixed:
-                            precind =  str((i.seq).reverse_complement()).index(sequence) #minus strand
+                            precind =  str((i.seq).reverse_complement()).find(sequence) #minus strand
                             if precind > 0:
                                 log.debug(["in minus genome",precID])
                                 flagseq=1
