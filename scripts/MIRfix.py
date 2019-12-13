@@ -247,6 +247,8 @@ def flip(filename,filen,outdir,mappingfile,matfile,listofnew,listofnewloop,listo
                         log.debug(["prec is here",precID])
                         flagprec=1
                         matID=famlinesplit[4].strip()#mature sequence ID
+                        #item=famline.split()
+                        #matID=item[4].strip()#mature sequence ID
                         log.debug(["mat is here",matID])
                         mtf = openfile(matfile)
                         for mat in SeqIO.parse(mtf, "fasta"):#get the corresponding mature sequence and get position
@@ -257,7 +259,7 @@ def flip(filename,filen,outdir,mappingfile,matfile,listofnew,listofnewloop,listo
                                 log.debug(["mat desc is here",matdesc])
                                 matseq=str(mat.seq).strip()
                                 matseq=matseq.replace('T','U')#replace T by U because the RNAfold produces the sequences as U
-                                spos=str(precseq).index(matseq)
+                                spos=str(precseq).find(matseq)
 #                                if not spos:  # again check minus strand
 #                                    spos=str(precseq).find(reverse_complement(Seq(matseq)))
                                 epos=spos+len(matseq)-1
@@ -276,7 +278,7 @@ def flip(filename,filen,outdir,mappingfile,matfile,listofnew,listofnewloop,listo
                 elif xcut<ycut and xcut<=10:#=> 5p and no need to cut, already <=10
                     precseq=precseq
 
-                spos=str(precseq).index(matseq)#spos after cut
+                spos=str(precseq).find(matseq)#spos after cut
                 epos=spos+len(matseq)-1#epos after cut
                 precseq=precseq.replace("U","T")#r
                 returnlst,listnogenomes,listnotingenome,templong,minusstrand=getindex(precseq,specie,precID,precDes,listnogenomes,listnotingenome,templong)# returns 3 values received, the first is the index of the sequence, the ID where this sequence found in the genome and the genome filename
@@ -636,8 +638,8 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                         newparts=parts
                     for i in range(0,len(partslist)):
                         if i==0 and partslist[0]!=-1:#if the partslist starting from position zero, i.e. the first part starts at position zero
-                            loopstart=hairpin.rindex('(',0,int(partslist[0])+1)+1
-                            loopend=hairpin.index(')',0,int(partslist[0])+1)-1
+                            loopstart=hairpin.rfind('(',0,int(partslist[0])+1)+1
+                            loopend=hairpin.find(')',0,int(partslist[0])+1)-1
                             if (((x in range(0,loopstart)) and (y in range(0,loopstart))) or ((x  in range(loopend+1,int(partslist[0])+1)) and (y in range(loopend+1,int(partslist[0])+1)))) and stat=="old":
                                 oldbroken=False
                                 oldloop=False
@@ -725,8 +727,8 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
 
 
                         if i==len(partslist)-1 and partslist[i]!=-1:
-                            loopstart=hairpin.rindex('(',int(partslist[i])+1)+1
-                            loopend=hairpin.index(')',int(partslist[i])+1)-1
+                            loopstart=hairpin.rfind('(',int(partslist[i])+1)+1
+                            loopend=hairpin.find(')',int(partslist[i])+1)-1
 
                             if (((x in range(int(partslist[i]),loopstart)) and (y in range(int(partslist[i]),loopstart) )) or ((x in range(loopend+1,len(hairpin))) and (y in range(loopend+1,len(hairpin))))) and stat=="old":
                                 oldncounts=int(hairpin[int(partslist[i]):].count("("))+int(hairpin[int(partslist[i]):].count(")"))
@@ -812,8 +814,8 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                                 currcounts=int(hairpin[int(partslist[i]):].count("("))+int(hairpin[int(partslist[i]):].count(")"))
 
                         if i!=0 and i!=len(partslist)-1 and i%2==0:
-                            loopstart=hairpin.rindex('(',int(partslist[i-1]),int(partslist[i])+1)+1
-                            loopend=hairpin.index(')',int(partslist[i-1]),int(partslist[i])+1)-1
+                            loopstart=hairpin.rfind('(',int(partslist[i-1]),int(partslist[i])+1)+1
+                            loopend=hairpin.find(')',int(partslist[i-1]),int(partslist[i])+1)-1
                             currflag=0
 
                             if (((x in range(int(partslist[i-1]),loopstart)) and (y in range(int(partslist[i-1]),loopstart))) or ((x in range(loopend+1,int(partslist[i])+1)) and (y in range(loopend+1,int(partslist[i])+1)))) and stat=="old":
@@ -1057,8 +1059,8 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                         finalnewcomp=finalcomp
 
                 if parts==1:
-                    loopstart=hairpin.rindex('(')+1
-                    loopend=hairpin.index(')')-1
+                    loopstart=hairpin.rfind('(')+1
+                    loopend=hairpin.find(')')-1
                     finalcomp1=[]
 
                     if (((x in range(loopstart,loopend+1)) and (y not in list(range(loopstart,loopend+1)))) or ((x not in list(range(loopstart,loopend+1))) and (y in range(loopstart,loopend+1)))) and stat=="old":
@@ -2075,6 +2077,7 @@ def comp_5p(ll, lr, sm, ss, precursor, run):
 
 def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
     logid = scriptname+'.getmirstar: '
+    mirstarepos=0 #CAVH
     try:
         log.debug("get mirstar here 18")
         mirflag=False
@@ -2163,7 +2166,7 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
                     sind=tempr.index(max(lstr))
                     sind1=max(lstr)
                     diff=epos-sind1
-                    mirstarspos=rev[sind]-diff+2
+                    mirstarspos=rev[sind-1]-diff+2 #CAVH
                 else:
                     for i in tempr:
                         if i>int(epos):
@@ -2172,12 +2175,16 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
                             diff=epos-sind1
                             mirstarspos=rev[sind-1]-diff+2
                             break
+            
+            if mirstarspos<=0: #CAVH
+                mirstarspos=0 #CAVH
+
             if mirstarepos>=spos:#To avoid overlapping between mir and mir*, this would happen in case the mir is in the loop
                 mirstarspos=mirstarspos-(mirstarepos-spos+1)
                 mirstarepos=mirstarepos-(mirstarepos-spos+1)
 
-            if mirstarspos<=0:
-                mirstarspos=0
+            #if mirstarspos<=0: #CAVH
+            #    mirstarspos=0  #CAVH
 
             mirstarspos = comp_5p(lstr, lstl, spos, mirstarspos, precursor, 1)  # Comparing 5'ends of mir and mir*
             mirstar=precursor[mirstarspos:mirstarepos+1]
@@ -2503,7 +2510,7 @@ def predict(align,matId,newmatID,matfile,filename,precdescrip,mapfile,directory,
                     newmatIDsplit=newmatID.split()
                     famsplit=precdescrip.split()
                     tempfamname=str(famsplit[0])
-                    famname=tempfamname[tempfamname.index('-')+1:]
+                    famname=tempfamname[tempfamname.find('-')+1:]
                     pos=str(finalpredspos)+".."+str(finalpredepos-1)#to remove the plus added before (in the readfold function) we did that there to make it included when substringing
                     updatemapfile.write(filename+" "+famname+" "+ famsplit[1]+" "+famsplit[0]+" "+newmatIDsplit[1]+" "+pos+" "+newmatIDsplit[0]+"\n")
                 elif finalpredspos==-1:
@@ -2652,12 +2659,12 @@ def getfilename(dirfile):#to get the name of the file without directory or exten
     logid = scriptname+'.getfilename: '
     try:
         if '/' in dirfile and "." in dirfile:
-            dirf=dirfile[dirfile.rindex('/')+1:]
-            filename=dirf[:dirf.rindex('.')]
+            dirf=dirfile[dirfile.rfind('/')+1:]
+            filename=dirf[:dirf.rfind('.')]
         elif '/' in dirfile and "." not in dirfile:
-            filename=dirfile[dirfile.rindex('/')+1:]
+            filename=dirfile[dirfile.rfind('/')+1:]
         elif '/' not in dirfile and "." in dirfile:
-            filename=dirfile[:dirfile.rindex('.')]
+            filename=dirfile[:dirfile.rfind('.')]
         elif '/' not in dirfile and "." not in dirfile:
             filename=dirfile
         return str(filename)
@@ -2676,13 +2683,13 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
         for line in SeqIO.parse(fofi,"fasta"):
             string=str(line.seq)
             if ((")") or ("(") or (".")) in str(line.seq):#to get where the folding starts, ex1: ACGTtgatagt..((..))(score) ex2: acgtatgat(((.)))(socre)
-                rindex=string.index(")")
-                lindex=string.index("(")
-                pindex=string.index(".")
+                rindex=string.find(")")
+                lindex=string.find("(")
+                pindex=string.find(".")
                 splitindex=min(rindex,lindex,pindex)
                 stall=string[splitindex:]
-                st=stall[0:stall.rindex('(')]
-                hairpin=stall[0:stall.rindex('(')]
+                st=stall[0:stall.rfind('(')]
+                hairpin=stall[0:stall.rfind('(')]
                 precsequence=string[0:splitindex]
                 partslist=[]
                 parts=0
@@ -2754,8 +2761,8 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
                     flagvalid=0 #flag if x and y are valid at least once in the parts in between the first hairpin and last hairpin
                     for i in range(0,len(partslist)):
                         if i==0:
-                            loopstart=hairpin.rindex('(',0,int(partslist[0])+1)+1
-                            loopend=hairpin.index(')',0,int(partslist[0])+1)-1
+                            loopstart=hairpin.rfind('(',0,int(partslist[0])+1)+1
+                            loopend=hairpin.find(')',0,int(partslist[0])+1)-1
                             if (((x in range(0,loopstart)) and (y in range(0,loopstart))) or ((x  in range(loopend+1,int(partslist[0])+1)) and (y in range(loopend+1,int(partslist[0])+1)))):
                                 log.debug("a")
                                 flagvalid=1
@@ -2809,8 +2816,8 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
                                 finalpredictedepos=-1
 
                         if i==len(partslist)-1 and flagvalid!=1:
-                            loopstart=hairpin.rindex('(',int(partslist[i])+1)+1
-                            loopend=hairpin.index(')',int(partslist[i])+1)-1
+                            loopstart=hairpin.rfind('(',int(partslist[i])+1)+1
+                            loopend=hairpin.find(')',int(partslist[i])+1)-1
 
                             if (((x in range(int(partslist[i]),loopstart)) and (y in range(int(partslist[i]),loopstart) )) or ((x in range(loopend+1,len(hairpin))) and (y in range(loopend+1,len(hairpin))))):
                                 log.debug("1")
@@ -2866,8 +2873,8 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
                                 finalpredictedepos=-1
 
                         if i!=0 and i!=len(partslist)-1 and i%2==0 and flagvalid!=1:
-                            loopstart=hairpin.rindex('(',int(partslist[i-1]),int(partslist[i])+1)+1
-                            loopend=hairpin.index(')',int(partslist[i-1]),int(partslist[i])+1)-1
+                            loopstart=hairpin.rfind('(',int(partslist[i-1]),int(partslist[i])+1)+1
+                            loopend=hairpin.find(')',int(partslist[i-1]),int(partslist[i])+1)-1
                             if (((x in range(int(partslist[i-1]),loopstart)) and (y in range(int(partslist[i-1]),loopstart))) or ((x in range(loopend+1,int(partslist[i])+1)) and (y in range(loopend+1,int(partslist[i])+1)))):
                                 log.debug("9")
                                 flagvalid=1
@@ -2922,8 +2929,8 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
                                 finalpredictedepos=-1
 
                 if parts==1:
-                    loopstart=hairpin.rindex('(')+1
-                    loopend=hairpin.index(')')-1
+                    loopstart=hairpin.rfind('(')+1
+                    loopend=hairpin.find(')')-1
                     if (((x in range(0,loopstart)) and (y in range(0,loopstart))) or ((x in range(loopend+1,len(hairpin))) and (y in range(loopend+1,len(hairpin))))):
                         finalpredictedspos=x
                         finalpredictedepos=y
@@ -3188,29 +3195,29 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                 correctmir=str(listoldstatus[corrind+3])
                 correctmirstar=str(listoldstatus[corrind+4])
                 orien=str(listoldstatus[corrind+5])
-                coor1=int(longseq.index(correctmir))
-                coor2=int(longseq.index(correctmirstar))
+                coor1=int(longseq.find(correctmir))
+                coor2=int(longseq.find(correctmirstar))
 
                 if coor2<coor1:
                     tempcor=correctmir[:]
                     correctmir=correctmirstar[:]
                     correctmirstar=tempcor[:]
 
-                startmatlong=int(longseq.index(correctmir))#position of mir in the long seq
+                startmatlong=int(longseq.find(correctmir))#position of mir in the long seq
                 startfinalseq=startmatlong-flanking#the start position in the long seq, based on user flanking
                 templongseq=longseq[startfinalseq:]#cut the long, with userflanking number of nucleotides
                 log.debug(["1st temp",startmatlong,startfinalseq,templongseq])
-                startmatstarlong=int(templongseq.index(correctmirstar))
+                startmatstarlong=int(templongseq.find(correctmirstar))
                 endmatstarlong=int(startmatstarlong+len(correctmirstar)-1)
                 endfinalseq=endmatstarlong+flanking
                 log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
                 correctfinalseq=str(templongseq[:endfinalseq+1])
                 listmisalignedcorr.append(corriddes)
                 listmisalignedcorr.append(correctfinalseq)
-                listmisalignedcorr.append(int(correctfinalseq.index(correctmir)))
-                listmisalignedcorr.append(int(correctfinalseq.index(correctmir))+len(correctmir))
-                listmisalignedcorr.append(int(correctfinalseq.index(correctmirstar)))
-                listmisalignedcorr.append(int(correctfinalseq.index(correctmirstar))+len(correctmirstar))
+                listmisalignedcorr.append(int(correctfinalseq.find(correctmir)))
+                listmisalignedcorr.append(int(correctfinalseq.find(correctmir))+len(correctmir))
+                listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar)))
+                listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar))+len(correctmirstar))
                 listmisalignedcorr.append(str(orien))
                 countcorrected=countcorrected+1
                 listcorrected.append(corriddes.strip())
@@ -3227,29 +3234,29 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                 correctmir=str(listgoodnew[corrind+3])
                 correctmirstar=str(listgoodnew[corrind+4])
                 orien=str(listgoodnew[corrind+6])
-                coor1=int(longseq.index(correctmir))
-                coor2=int(longseq.index(correctmirstar))
+                coor1=int(longseq.find(correctmir))
+                coor2=int(longseq.find(correctmirstar))
 
                 if coor2<coor1:
                     tempcor=correctmir[:]
                     correctmir=correctmirstar[:]
                     correctmirstar=tempcor[:]
 
-                startmatlong=int(longseq.index(correctmir))#position of mir in the long seq
+                startmatlong=int(longseq.find(correctmir))#position of mir in the long seq
                 startfinalseq=startmatlong-flanking#the start position in the long seq, based on user flanking
                 templongseq=longseq[startfinalseq:]#cut the long, with userflanking number of nucleotides
                 log.debug(["1st temp",startmatlong,startfinalseq,templongseq])
-                startmatstarlong=int(templongseq.index(correctmirstar))
+                startmatstarlong=int(templongseq.find(correctmirstar))
                 endmatstarlong=int(startmatstarlong+len(correctmirstar)-1)
                 endfinalseq=endmatstarlong+flanking
                 log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
                 correctfinalseq=str(templongseq[:endfinalseq+1])
                 listmisalignedcorr.append(corriddes)
                 listmisalignedcorr.append(correctfinalseq)
-                listmisalignedcorr.append(int(correctfinalseq.index(correctmir)))
-                listmisalignedcorr.append(int(correctfinalseq.index(correctmir))+len(correctmir))
-                listmisalignedcorr.append(int(correctfinalseq.index(correctmirstar)))
-                listmisalignedcorr.append(int(correctfinalseq.index(correctmirstar))+len(correctmirstar))
+                listmisalignedcorr.append(int(correctfinalseq.find(correctmir)))
+                listmisalignedcorr.append(int(correctfinalseq.find(correctmir))+len(correctmir))
+                listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar)))
+                listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar))+len(correctmirstar))
                 listmisalignedcorr.append(str(orien))
                 countcorrectedTonew=int(countcorrectedTonew)+1
                 listcorrectedori.append(corriddes.strip())
@@ -3518,8 +3525,8 @@ def sublist(filename):
                     specie=precitem[2].strip()+" "+precitem[3]
                     mspos=None
                     mepos=None
-                    mspos=pseq.index(fmatseq)
-                    mepos=pseq.rindex(ematseq)  # rfind returns the last index of the match
+                    mspos=pseq.find(fmatseq)
+                    mepos=pseq.rfind(ematseq)  # rfind returns the last index of the match
 
 #                    if not mspos and mepos:
 #                        mspos=pseq.rfind(str(Seq(fmatseq).reverse_complement()))
@@ -3594,7 +3601,7 @@ def sublist(filename):
             del listofmirstar[:]
 
         if ".fa" in filename:
-            filename=filename[:filename.index(".fa")]
+            filename=filename[:filename.find(".fa")]
             resultfastafile=outdir+filename.strip()+"-res.fa"
         else:
             resultfastafile=outdir+filename.strip()+"-res.fa"
@@ -3624,13 +3631,13 @@ def sublist(filename):
                     for record in SeqIO.parse(mtf, 'fasta'):
                         curmatseq=str(record.seq)
                         if firstmat.strip() in record.description:
-                            startmat=int(mat2seq.index(curmatseq))
+                            startmat=int(mat2seq.find(curmatseq))
                             endmat=startmat+len(curmatseq)-1
                             first = 'Found'
                             log.debug(logid+str(["heres new",mat2seq,startmat,endmat,curmatseq]))
 
                         if lastmat.strip() in record.description:
-                            startmatstar=int(mat2seq.index(curmatseq))
+                            startmatstar=int(mat2seq.find(curmatseq))
                             endmatstar=startmatstar+len(curmatseq)-1
                             second = 'Found'
                             log.debug(logid+str(["heres new",startmatstar,endmatstar,curmatseq]))
@@ -3683,8 +3690,13 @@ def sublist(filename):
                             star=True
                             break
 
-                    coortemp1=int(mat1seq.index(curmatseq))
-                    coortemp2=int(mat1seq.index(curmatstar))
+                    coortemp1=int(mat1seq.find(curmatseq))
+                    coortemp2=int(mat1seq.find(curmatstar))
+                    
+                    #if coortemp1 == -1 or coortemp2 == -1:
+                    #    log.error(logid+'Not possible to locate miR or miR* in '+curmatID+' with '+mat1seq+" and "+curmatseq+ " and "+ curmatstar)
+                    #    sys.exit()
+
 
                     if coortemp2<coortemp1:
                         tempseqex=curmatseq[:]
@@ -3693,7 +3705,7 @@ def sublist(filename):
 
                     log.debug(logid+str(["no long",coortemp1,coortemp2,curmatseq,curmatstar]))
 
-                    startmattemp=int(mat1seq.index(curmatseq))
+                    startmattemp=int(mat1seq.find(curmatseq))
 
                     if startmattemp<=userflanking:
                         startmat=startmattemp
@@ -3709,7 +3721,7 @@ def sublist(filename):
                     log.debug(logid+str(['coor not',startmat,endmat]))
 
                     if star:
-                        startmatstar=int(tempseq.index(curmatstar))
+                        startmatstar=int(tempseq.find(curmatstar))
                         endmatstar=startmatstar+int(len(curmatstar)-1)
                         numberendflank=int(len(tempseq)-endmatstar-1)
 
@@ -3751,7 +3763,7 @@ def sublist(filename):
                         break
 
                     elif (not star and nstar) or startmatstar==-1 or endmatstar==-1:
-                        startmat=int(mat1seq.index(curmatseq))
+                        startmat=int(mat1seq.find(curmatseq))
                         endmat=startmat+len(curmatseq)-1
                         finalseq=mat1seq
                         startmstar=0
@@ -3828,7 +3840,7 @@ def sublist(filename):
                             curmatsplit=(starrec.description).split()
                             curmatsplit1=(curmatsplit[1]).split('-')
                             starrecID=curmatsplit1[0]
-                            if (curmatID).strip()==(starrecID).strip() or (curmatID).strip()+'/' in (starrecID).strip()and (resprecid.strip() in starrec.description):
+                            if (curmatID).strip()==(starrecID).strip() or (curmatID).strip()+'/' in (starrecID).strip() and (resprecid.strip() in starrec.description):
                                 curmatstar=str(starrec.seq)
                                 star=True
                                 break
@@ -3842,12 +3854,17 @@ def sublist(filename):
                     log.debug(["coor1temp",longseq,curmatseq])
                     coortemp1=int(longseq.index(curmatseq))
                     coortemp2=int(longseq.index(curmatstar))
+                    
+                    #if coortemp1 == -1 or coortemp2 == -1:
+                    #    log.error(logid+'Not possible to locate miR or miR* in '+curmatID+' with '+ longseq +" and "+curmatseq+ " and "+ curmatstar)
+                    #    sys.exit()
+                    
                     if coortemp2<coortemp1:
                         tempseqex=curmatseq[:]
                         curmatseq=curmatstar[:]
                         curmatstar=tempseqex[:]
 
-                    startmatlong=int(longseq.index(curmatseq))
+                    startmatlong=int(longseq.find(curmatseq))
                     startfinalseq=startmatlong-userflanking
                     startmat=userflanking
                     endmat=startmat+len(curmatseq)-1
@@ -3855,13 +3872,13 @@ def sublist(filename):
                     log.debug(["curmat long",mat1seq,curmatseq,longseq])
                     log.debug(['coor long',startmat,endmat])
 
-                    startmatstarlong=int(templongseq.index(curmatstar))
+                    startmatstarlong=int(templongseq.find(curmatstar))
                     endmatstarlong=int(startmatstarlong+len(curmatstar)-1)
                     endfinalseq=endmatstarlong+userflanking
                     finalseq=str(templongseq[:endfinalseq+1])
 
                     log.debug(["final seq",finalseq,curmatstar,endfinalseq+1])
-                    startmatstar=int(finalseq.index(curmatstar))
+                    startmatstar=int(finalseq.find(curmatstar))
                     endmatstar=int(startmatstar+len(curmatstar)-1)
                     log.debug(['coor',startmatstar,endmatstar,startmatstarlong,endmatstarlong])
 
@@ -3896,7 +3913,7 @@ def sublist(filename):
                         break
 
                     elif (not star and nstar) or startmatstar==-1 or endmatstar==-1:
-                        startmat=int(mat1seq.index(curmatseq))
+                        startmat=int(mat1seq.find(curmatseq))
                         endmat=startmat+len(curmatseq)-1
                         finalseq=mat1seq
                         startmstar=0
