@@ -1042,6 +1042,8 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
 
                     if len(finalcomp)>0 and stat=="new":
                         currhairpin=hairpin[finalcomp[4]:finalcomp[5]+1]
+                        if currhairpin.startswith(")"): #CAVH Here to detect ')' at the begginning, always hairpin starts with '.' or '('
+                            currhairpin=currhairpin[1:] #CAVH
                         newlstlstr=[]
                         newlstlstl=[]
                         for nuc in range(0,len(currhairpin)):
@@ -2166,14 +2168,14 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
                     sind=tempr.index(max(lstr))
                     sind1=max(lstr)
                     diff=epos-sind1
-                    mirstarspos=rev[sind-1]-diff+2 #CAVH
+                    mirstarspos=rev[sind]-diff+2 
                 else:
                     for i in tempr:
                         if i>int(epos):
                             sind=tempr.index(i)#after the end of the mat
-                            sind1=tempr[sind-1]#before the end of the mat
+                            sind1=tempr[sind]#before the end of the mat
                             diff=epos-sind1
-                            mirstarspos=rev[sind-1]-diff+2
+                            mirstarspos=rev[sind]-diff+2
                             break
             
             if mirstarspos<=0: #CAVH
