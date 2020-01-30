@@ -1032,6 +1032,8 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
 
                     if len(finalcomp)>0 and stat=="old":
                         currhairpin=hairpin[finalcomp[4]:finalcomp[5]+1]
+                        if currhairpin.startswith(")"): #CAVH Changes here to detect ')' at the beggining
+                            currhairpin=currhairpin[1:] #CAVH
                         oldlstlstr=[]
                         oldlstlstl=[]
                         for nuc in range(0,len(currhairpin)):
