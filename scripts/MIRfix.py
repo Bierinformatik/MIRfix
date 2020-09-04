@@ -279,7 +279,7 @@ def flip(filename,filen,outdir,mappingfile,matfile,listofnew,listofnewloop,listo
                     precseq=precseq
 
                 spos=str(precseq).find(matseq)#spos after cut
-                epos=spos+len(matseq)-1#epos after cut
+                epos=spos+len(matseq)-1 #epos after cut
                 precseq=precseq.replace("U","T")#r
                 returnlst,listnogenomes,listnotingenome,templong,minusstrand=getindex(precseq,specie,precID,precDes,listnogenomes,listnotingenome,templong)# returns 3 values received, the first is the index of the sequence, the ID where this sequence found in the genome and the genome filename
 
@@ -1032,8 +1032,12 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
 
                     if len(finalcomp)>0 and stat=="old":
                         currhairpin=hairpin[finalcomp[4]:finalcomp[5]+1]
-                        if currhairpin.startswith(")"): #CAVH Changes here to detect ')' at the beggining
-                            currhairpin=currhairpin[1:] #CAVH
+                        #CAVH
+                        for i in currhairpin:
+                            if i != ")": #CAVH To detect ')' at the beginning
+                                index = currhairpin.index(i)
+                                currhairpin=currhairpin[index:]
+                                break
                         oldlstlstr=[]
                         oldlstlstl=[]
                         for nuc in range(0,len(currhairpin)):
@@ -1044,8 +1048,12 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
 
                     if len(finalcomp)>0 and stat=="new":
                         currhairpin=hairpin[finalcomp[4]:finalcomp[5]+1]
-                        if currhairpin.startswith(")"): #CAVH Here to detect ')' at the begginning, always hairpin starts with '.' or '('
-                            currhairpin=currhairpin[1:] #CAVH
+                        #CAVH
+                        for i in currhairpin:
+                            if i != ")": #CAVH To detect ')' at the beginning
+                                index = currhairpin.index(i)
+                                currhairpin=currhairpin[index:]
+                                break
                         newlstlstr=[]
                         newlstlstl=[]
                         for nuc in range(0,len(currhairpin)):
@@ -2170,16 +2178,16 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
                     sind=tempr.index(max(lstr))
                     sind1=max(lstr)
                     diff=epos-sind1
-                    mirstarspos=rev[sind]-diff+2 
+                    mirstarspos=rev[sind]-diff+2
                 else:
                     for i in tempr:
                         if i>int(epos):
                             sind=tempr.index(i)#after the end of the mat
-                            sind1=tempr[sind]#before the end of the mat
+                            sind1=tempr[sind-1]#before the end of the mat
                             diff=epos-sind1
-                            mirstarspos=rev[sind]-diff+2
+                            mirstarspos=rev[sind-1]-diff+2
                             break
-            
+
             if mirstarspos<=0: #CAVH
                 mirstarspos=0 #CAVH
 
@@ -2187,8 +2195,8 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
                 mirstarspos=mirstarspos-(mirstarepos-spos+1)
                 mirstarepos=mirstarepos-(mirstarepos-spos+1)
 
-            #if mirstarspos<=0: #CAVH
-            #    mirstarspos=0  #CAVH
+            #if mirstarspos<=0: #CAVH the position is better before last definition
+            #    mirstarspos=0  
 
             mirstarspos = comp_5p(lstr, lstl, spos, mirstarspos, precursor, 1)  # Comparing 5'ends of mir and mir*
             mirstar=precursor[mirstarspos:mirstarepos+1]
@@ -3009,6 +3017,7 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
 def doalifold(alnfile,outdir):
     logid = scriptname+'.doalifold: '
     try:
+        #f=os.popen("RNAalifold --noPS -r "+alnfile)
         f=os.popen("RNAalifold --noPS "+alnfile)
         alifoldtemp=outdir+'alifoldtemp.txt'
         foldrestemp=open(alifoldtemp,'w')
@@ -3210,12 +3219,20 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                 startmatlong=int(longseq.find(correctmir))#position of mir in the long seq
                 startfinalseq=startmatlong-flanking#the start position in the long seq, based on user flanking
                 templongseq=longseq[startfinalseq:]#cut the long, with userflanking number of nucleotides
+                #CAVH
+                endmatlong=int(startmatlong + len(correctmir)-1) #End position mir
+                templongnomirseq=longseq[endmatlong:] #Cut at the end position
+                #
                 log.debug(["1st temp",startmatlong,startfinalseq,templongseq])
-                startmatstarlong=int(templongseq.find(correctmirstar))
+                #startmatstarlong=int(templongseq.find(correctmirstar))
+                startmatstarlong=int(templongnomirseq.find(correctmirstar)) #CAVH, search without mature seq detec    ted earlier
                 endmatstarlong=int(startmatstarlong+len(correctmirstar)-1)
                 endfinalseq=endmatstarlong+flanking
+                contexlongmature = int(templongseq.find(templongnomirseq)) #CAVH search start of portion without mir
+                endfinalseqcontex=endfinalseq + contextlongmature #CAVH Update end coord
                 log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
-                correctfinalseq=str(templongseq[:endfinalseq+1])
+                #correctfinalseq=str(templongseq[:endfinalseq+1])
+                correctfinalseq=str(templongseq[:endfinalseqcontex+1]) #CAVH
                 listmisalignedcorr.append(corriddes)
                 listmisalignedcorr.append(correctfinalseq)
                 listmisalignedcorr.append(int(correctfinalseq.find(correctmir)))
@@ -3249,12 +3266,20 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                 startmatlong=int(longseq.find(correctmir))#position of mir in the long seq
                 startfinalseq=startmatlong-flanking#the start position in the long seq, based on user flanking
                 templongseq=longseq[startfinalseq:]#cut the long, with userflanking number of nucleotides
-                log.debug(["1st temp",startmatlong,startfinalseq,templongseq])
-                startmatstarlong=int(templongseq.find(correctmirstar))
+                ## CAVH
+                endmatlong=int(startmatlong + len(correctmir)-1)
+                templongnomirseq=longseq[endmatlong:]
+                #
+                log.debug(["1st temp",startmatlong,endmatlong,startfinalseq,templongseq])
+                #startmatstarlong=int(templongseq.find(correctmirstar))
+                startmatstarlong=int(templongnomirseq.find(correctmirstar)) #CAVH, search without mature seq detected earlier
                 endmatstarlong=int(startmatstarlong+len(correctmirstar)-1)
                 endfinalseq=endmatstarlong+flanking
+                contextlongmature = int(templongseq.find(templongnomirseq))
+                endfinalseqcontex=endfinalseq + contextlongmature #CAVH
                 log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
-                correctfinalseq=str(templongseq[:endfinalseq+1])
+                #correctfinalseq=str(templongseq[:endfinalseq+1])
+                correctfinalseq=str(templongseq[:endfinalseqcontex+1]) #CAVH 
                 listmisalignedcorr.append(corriddes)
                 listmisalignedcorr.append(correctfinalseq)
                 listmisalignedcorr.append(int(correctfinalseq.find(correctmir)))
@@ -3694,9 +3719,9 @@ def sublist(filename):
                             star=True
                             break
 
-                    coortemp1=int(mat1seq.find(curmatseq))
-                    coortemp2=int(mat1seq.find(curmatstar))
-                    
+                    coortemp1=int(mat1seq.index(curmatseq))
+                    coortemp2=int(mat1seq.index(curmatstar))
+
                     #if coortemp1 == -1 or coortemp2 == -1:
                     #    log.error(logid+'Not possible to locate miR or miR* in '+curmatID+' with '+mat1seq+" and "+curmatseq+ " and "+ curmatstar)
                     #    sys.exit()
@@ -3720,13 +3745,16 @@ def sublist(filename):
 
                     endmat=startmat+len(curmatseq)-1
                     tempseq=mat1seq[startfinalseq:]
-
+                    tempnomirseq=mat1seq[endmat:] #CAVH fragment without detected mir
+                    updateindexnomirregion = int(tempseq.find(tempnomirseq)) #CAVH start of no mir region on tempseq context
                     log.debug(logid+str(["curmat not",mat1seq,curmatseq]))
                     log.debug(logid+str(['coor not',startmat,endmat]))
 
                     if star:
-                        startmatstar=int(tempseq.find(curmatstar))
-                        endmatstar=startmatstar+int(len(curmatstar)-1)
+                        #startmatstar=int(tempseq.find(curmatstar))
+                        startmatstar=int(tempnomirseq.find(curmatstar)) #CAVH search on region without mir
+                        #endmatstar=startmatstar+int(len(curmatstar)-1)
+                        endmatstar = startmatstar+int(len(curmatstar)-1) + updateindexnomirregion #CAVH 
                         numberendflank=int(len(tempseq)-endmatstar-1)
 
                         if numberendflank<=userflanking:
@@ -3737,7 +3765,7 @@ def sublist(filename):
 
                         log.debug(logid+str(['coor star not',startmatstar,endmatstar,finalseq]))#,startmatstarlong,endmatstarlong)
 
-                    if star and nstar and  startmatstar!=-1 and endmatstar!=-1 and startmatstar>endmat:
+                    if star and nstar and startmatstar!=-1 and endmatstar!=-1 and startmatstar>endmat:
                         list1matcoor.append(curmatID.strip())#mat original
                         list1matcoor.append(curmatsplit[1].strip())#matstarID
                         list1matcoor.append(startmat)
@@ -3853,16 +3881,16 @@ def sublist(filename):
 
                     if not curmatstar:
                         log.error(logid+'Not possible to define curmatstar for '+str(matfile)+' and '+str(outdir+filename.strip()+"-mirstar.fa"))
-                        sys.exit()
+                        #sys.exit(1)
 
                     log.debug(["coor1temp",longseq,curmatseq])
                     coortemp1=int(longseq.index(curmatseq))
                     coortemp2=int(longseq.index(curmatstar))
-                    
+
                     #if coortemp1 == -1 or coortemp2 == -1:
                     #    log.error(logid+'Not possible to locate miR or miR* in '+curmatID+' with '+ longseq +" and "+curmatseq+ " and "+ curmatstar)
                     #    sys.exit()
-                    
+
                     if coortemp2<coortemp1:
                         tempseqex=curmatseq[:]
                         curmatseq=curmatstar[:]
@@ -3871,19 +3899,38 @@ def sublist(filename):
                     startmatlong=int(longseq.find(curmatseq))
                     startfinalseq=startmatlong-userflanking
                     startmat=userflanking
-                    endmat=startmat+len(curmatseq)-1
+                    endmat=(startmat+len(curmatseq))-1
+                    endmatlong=int(startmatlong + len(curmatseq)-1) #CAVH exlude all
                     templongseq=longseq[startfinalseq:]
+                    templongnomirseq=longseq[endmatlong:] #CAVH portion without mir
+                    contextlongmature = int(templongseq.find(templongnomirseq)) #CAVH update coordinates on mir context
                     log.debug(["curmat long",mat1seq,curmatseq,longseq])
                     log.debug(['coor long',startmat,endmat])
 
-                    startmatstarlong=int(templongseq.find(curmatstar))
+                    #startmatstarlong=int(templongseq.find(curmatstar))
+                    startmatstarlong=int(templongnomirseq.find(curmatstar))
                     endmatstarlong=int(startmatstarlong+len(curmatstar)-1)
                     endfinalseq=endmatstarlong+userflanking
-                    finalseq=str(templongseq[:endfinalseq+1])
+                    endfinalseqcontex=endfinalseq + contextlongmature #CAVH
+                    finalseq = str(templongseq[:endfinalseqcontex+1]) #CAVH
+                    #finalseq=str(templongseq[:endfinalseq+1])
 
                     log.debug(["final seq",finalseq,curmatstar,endfinalseq+1])
-                    startmatstar=int(finalseq.find(curmatstar))
-                    endmatstar=int(startmatstar+len(curmatstar)-1)
+                    ### CAVH
+                    #Look for mir in final seq:
+                    startmirfinal = int(finalseq.find(curmatseq))
+                    endmirfinal = int(startmirfinal + len(curmatseq) - 1)
+                    subsetnomir = finalseq[endmirfinal:]
+                    indexupdate = finalseq.find(subsetnomir)
+                    #Look mirstar in final seq
+                    startmirstarfinal = subsetnomir.find(curmatstar)
+                    endmirstarfinal = int(startmirstarfinal + len(curmatstar) - 1)
+                    #update coordinates 
+                    startmatstar = startmirstarfinal + indexupdate
+                    endmatstar = endmirstarfinal + indexupdate                    
+                    #startmatstar=int(finalseq.find(curmatstar))
+                    #endmatstar=int(startmatstar+len(curmatstar)-1)
+                    #CAVH
                     log.debug(['coor',startmatstar,endmatstar,startmatstarlong,endmatstarlong])
 
                     if star and nstar and  startmatstar!=-1 and endmatstar!=-1 and startmatstar>endmat:
@@ -4036,11 +4083,11 @@ def sublist(filename):
                 ndhalfsum=ndhalfgaps+ndhalfsum
                 numofseqs=numofseqs+1
             log.debug([sthalfsum,ndhalfsum,totalstnucnum,totalndnucnum])
-
+            # CAVH: Here calculated the average of nt on left side of align (stnucavg) and on the right side (ndnucavg) on the alignment 
             stnucavg=totalstnucnum/numofseqs
             ndnucavg=totalndnucnum/numofseqs
             alignment=AlignIO.read(outdir+filename.strip()+'.stk',"stockholm")
-
+            #CAVH: Here iterate again but with calculated average scores
             for record in alignment:
                 lenseq=len(str(record.seq))
                 seq=str(record.seq)
