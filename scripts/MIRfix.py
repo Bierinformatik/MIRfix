@@ -3228,7 +3228,7 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                 startmatstarlong=int(templongnomirseq.find(correctmirstar)) #CAVH, search without mature seq detec    ted earlier
                 endmatstarlong=int(startmatstarlong+len(correctmirstar)-1)
                 endfinalseq=endmatstarlong+flanking
-                contexlongmature = int(templongseq.find(templongnomirseq)) #CAVH search start of portion without mir
+                contextlongmature = int(templongseq.find(templongnomirseq)) #CAVH search start of portion without mir
                 endfinalseqcontex=endfinalseq + contextlongmature #CAVH Update end coord
                 log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
                 #correctfinalseq=str(templongseq[:endfinalseq+1])
