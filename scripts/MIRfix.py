@@ -2775,13 +2775,13 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
                         if i==0:
                             loopstart=hairpin.rfind('(',0,int(partslist[0])+1)+1
                             loopend=hairpin.find(')',0,int(partslist[0])+1)-1
-                            if (((x in range(0,loopstart)) and (y in range(0,loopstart))) or ((x  in range(loopend+1,int(partslist[0])+1)) and (y in range(loopend+1,int(partslist[0])+1)))):
+                            if (((x in range(0,loopstart)) and (y in range(0,loopstart))) or ((x in range(loopend+1,int(partslist[0])+1)) and (y in range(loopend+1,int(partslist[0])+1)))):
                                 log.debug("a")
                                 flagvalid=1
                                 finalpredictedspos=predictedspos
                                 finalpredictedepos=predictedepos
 
-                            elif (x in range(0,loopstart))  and  (y in range(loopstart,loopend+1)):
+                            elif (x in range(0,loopstart)) and (y in range(loopstart,loopend+1)):
                                 flagvalid=1
                                 shiftby=y-(loopstart-1)
                                 if x<=shiftby:
@@ -3208,37 +3208,54 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                 correctmir=str(listoldstatus[corrind+3])
                 correctmirstar=str(listoldstatus[corrind+4])
                 orien=str(listoldstatus[corrind+5])
-                coor1=int(longseq.find(correctmir))
-                coor2=int(longseq.find(correctmirstar))
+                #coor1=int(longseq.find(correctmir)) #CAVH
+                #coor2=int(longseq.find(correctmirstar)) #CAVH
+                #CAVH
+                (coor1, coor2, correctfinalseq) = find_positions(longseq, correctseq,
+                                                 correctmir, correctmirstar,
+                                                 flanking)
 
                 if coor2<coor1:
                     tempcor=correctmir[:]
                     correctmir=correctmirstar[:]
                     correctmirstar=tempcor[:]
 
-                startmatlong=int(longseq.find(correctmir))#position of mir in the long seq
-                startfinalseq=startmatlong-flanking#the start position in the long seq, based on user flanking
-                templongseq=longseq[startfinalseq:]#cut the long, with userflanking number of nucleotides
+                #startmatlong=int(longseq.find(correctmir))#position of mir in the long seq
+                #startfinalseq=startmatlong-flanking#the start position in the long seq, based on user flanking
+                #templongseq=longseq[startfinalseq:]#cut the long, with userflanking number of nucleotides
                 #CAVH
-                endmatlong=int(startmatlong + len(correctmir)-1) #End position mir
-                templongnomirseq=longseq[endmatlong:] #Cut at the end position
+                #endmatlong=int(startmatlong + len(correctmir)-1) #End position mir
+                #templongnomirseq=longseq[endmatlong:] #Cut at the end position
                 #
-                log.debug(["1st temp",startmatlong,startfinalseq,templongseq])
+                #log.debug(["1st temp",startmatlong,startfinalseq,templongseq])
                 #startmatstarlong=int(templongseq.find(correctmirstar))
-                startmatstarlong=int(templongnomirseq.find(correctmirstar)) #CAVH, search without mature seq detec    ted earlier
-                endmatstarlong=int(startmatstarlong+len(correctmirstar)-1)
-                endfinalseq=endmatstarlong+flanking
-                contextlongmature = int(templongseq.find(templongnomirseq)) #CAVH search start of portion without mir
-                endfinalseqcontex=endfinalseq + contextlongmature #CAVH Update end coord
-                log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
+                #startmatstarlong=int(templongnomirseq.find(correctmirstar)) #CAVH, search without mature seq detec    ted earlier
+                #endmatstarlong=int(startmatstarlong+len(correctmirstar)-1)
+                #endfinalseq=endmatstarlong+flanking
+                #contextlongmature = int(templongseq.find(templongnomirseq)) #CAVH search start of portion without mir
+                #endfinalseqcontex=endfinalseq + contextlongmature #CAVH Update end coord
+                #log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
                 #correctfinalseq=str(templongseq[:endfinalseq+1])
-                correctfinalseq=str(templongseq[:endfinalseqcontex+1]) #CAVH
+                #correctfinalseq=str(templongseq[:endfinalseqcontex+1]) #CAVH
+                
+                #CAVH: Avoid overlapping on precursor:
+                start_mir = correctfinalseq.find(correctmir)
+                end_mir = (start_mir + len(correctmir)) - 1
+                correctfinalseqnomir = correctfinalseq[end_mir + 1:]
+                index_to_update = correctfinalseq.find(correctfinalseqnomir)
                 listmisalignedcorr.append(corriddes)
                 listmisalignedcorr.append(correctfinalseq)
-                listmisalignedcorr.append(int(correctfinalseq.find(correctmir)))
-                listmisalignedcorr.append(int(correctfinalseq.find(correctmir))+len(correctmir))
-                listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar)))
-                listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar))+len(correctmirstar))
+                listmisalignedcorr.append(int(start_mir)) 
+                listmisalignedcorr.append(int(end_mir))
+                #listmisalignedcorr.append(int(correctfinalseq.find(correctmir))) #CAVH
+                #listmisalignedcorr.append(int(correctfinalseq.find(correctmir))+len(correctmir)) #CAVH
+                start_mirstar_temp = correctfinalseqnomir.find(correctmirstar)
+                star_mirstar = start_mirstar_temp + index_to_update
+                end_mirstar = (start_mirstar + len(correctmirstar)) - 1
+                listmisalignedcorr.append(int(star_mirstar))
+                listmisalignedcorr.append(int(end_mirstar))
+                #listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar))) # CAVH
+                #listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar))+len(correctmirstar)) #CAVH
                 listmisalignedcorr.append(str(orien))
                 countcorrected=countcorrected+1
                 listcorrected.append(corriddes.strip())
@@ -3255,47 +3272,64 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                 correctmir=str(listgoodnew[corrind+3])
                 correctmirstar=str(listgoodnew[corrind+4])
                 orien=str(listgoodnew[corrind+6])
-                coor1=int(longseq.find(correctmir))
-                coor2=int(longseq.find(correctmirstar))
+                #coor1=int(longseq.find(correctmir))
+                #coor2=int(longseq.find(correctmirstar))
+                #CAVH
+                (coor1, coor2, correctfinalseq) = find_positions(longseq, correctseq,
+                                                 correctmir, correctmirstar,
+                                                 flanking)
 
                 if coor2<coor1:
                     tempcor=correctmir[:]
                     correctmir=correctmirstar[:]
                     correctmirstar=tempcor[:]
 
-                startmatlong=int(longseq.find(correctmir))#position of mir in the long seq
-                startfinalseq=startmatlong-flanking#the start position in the long seq, based on user flanking
-                templongseq=longseq[startfinalseq:]#cut the long, with userflanking number of nucleotides
+                #startmatlong=int(longseq.find(correctmir))#position of mir in the long seq
+                #startfinalseq=startmatlong-flanking#the start position in the long seq, based on user flanking
+                #templongseq=longseq[startfinalseq:]#cut the long, with userflanking number of nucleotides
                 ## CAVH
-                endmatlong=int(startmatlong + len(correctmir)-1)
-                templongnomirseq=longseq[endmatlong:]
+                #endmatlong=int(startmatlong + len(correctmir)-1)
+                #templongnomirseq=longseq[endmatlong:]
                 #
-                log.debug(["1st temp",startmatlong,endmatlong,startfinalseq,templongseq])
+                #log.debug(["1st temp",startmatlong,endmatlong,startfinalseq,templongseq])
                 #startmatstarlong=int(templongseq.find(correctmirstar))
-                startmatstarlong=int(templongnomirseq.find(correctmirstar)) #CAVH, search without mature seq detected earlier
-                endmatstarlong=int(startmatstarlong+len(correctmirstar)-1)
-                endfinalseq=endmatstarlong+flanking
-                contextlongmature = int(templongseq.find(templongnomirseq))
-                endfinalseqcontex=endfinalseq + contextlongmature #CAVH
-                log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
+                #startmatstarlong=int(templongnomirseq.find(correctmirstar)) #CAVH, search without mature seq detected earlier
+                #endmatstarlong=int(startmatstarlong+len(correctmirstar)-1)
+                #endfinalseq=endmatstarlong+flanking
+                #contextlongmature = int(templongseq.find(templongnomirseq))
+                #endfinalseqcontex=endfinalseq + contextlongmature #CAVH
+                #log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
                 #correctfinalseq=str(templongseq[:endfinalseq+1])
-                correctfinalseq=str(templongseq[:endfinalseqcontex+1]) #CAVH 
+                #correctfinalseq=str(templongseq[:endfinalseqcontex+1]) #CAVH 
+                
+                start_mir = correctfinalseq.find(correctmir)
+                end_mir = (start_mir + len(correctmir)) - 1
+                correctfinalseqnomir = correctfinalseq[end_mir + 1:]
+                index_to_update = correctfinalseq.find(correctfinalseqnomir)
                 listmisalignedcorr.append(corriddes)
                 listmisalignedcorr.append(correctfinalseq)
-                listmisalignedcorr.append(int(correctfinalseq.find(correctmir)))
-                listmisalignedcorr.append(int(correctfinalseq.find(correctmir))+len(correctmir))
-                listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar)))
-                listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar))+len(correctmirstar))
+                #listmisalignedcorr.append(int(correctfinalseq.find(correctmir))) #CAVH
+                #listmisalignedcorr.append(int(correctfinalseq.find(correctmir))+len(correctmir)) #CAVH
+                #listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar))) #CAVH
+                #listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar))+len(correctmirstar)) #CAVH
+                listmisalignedcorr.append(int(start_mir)) 
+                listmisalignedcorr.append(int(end_mir))
+                start_mirstar_temp = correctfinalseqnomir.find(correctmirstar)
+                star_mirstar = start_mirstar_temp + index_to_update
+                end_mirstar = (start_mirstar + len(correctmirstar)) - 1
+                listmisalignedcorr.append(int(star_mirstar))
+                listmisalignedcorr.append(int(end_mirstar))
                 listmisalignedcorr.append(str(orien))
                 countcorrectedTonew=int(countcorrectedTonew)+1
                 listcorrectedori.append(corriddes.strip())
                 log.debug(["corrected seq",correctfinalseq])
-                if corid.strip()=='la-mir-30c' or corriddes.strip()=='MI0019480':
-                    log.debug("IN correct test here")
-                    log.debug(["long seq",longseq,templong[indexlongmat]])
-                    log.debug(["1st temp",startmatlong,startfinalseq,templongseq])
-                    log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
-                    log.debug(["list misaligned",listmisalignedcorr])
+                # CAVH: There is no reason to have this here:
+                #if corid.strip()=='la-mir-30c' or corriddes.strip()=='MI0019480':
+                #    log.debug("IN correct test here")
+                #    log.debug(["long seq",longseq,templong[indexlongmat]])
+                #    log.debug(["1st temp",startmatlong,startfinalseq,templongseq])
+                #    log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
+                #    log.debug(["list misaligned",listmisalignedcorr])
 
         return int(countcorrected),int(countcorrectedTonew),listmisalignedcorr,listcorrected,listcorrectedori
 
@@ -3657,16 +3691,21 @@ def sublist(filename):
                     mtf = openfile(matfile)
                     first = None
                     second = None
+                    update_index = None #CAVH
+                    mat2seqnomir = None #CAVH
                     for record in SeqIO.parse(mtf, 'fasta'):
                         curmatseq=str(record.seq)
                         if firstmat.strip() in record.description:
                             startmat=int(mat2seq.find(curmatseq))
                             endmat=startmat+len(curmatseq)-1
+                            mat2seqnomir = mat2seq[endmat + 1:] #CAVH
+                            update_index = mat2seq.find(mat2seqnomir) #CAVH
                             first = 'Found'
                             log.debug(logid+str(["heres new",mat2seq,startmat,endmat,curmatseq]))
 
                         if lastmat.strip() in record.description:
-                            startmatstar=int(mat2seq.find(curmatseq))
+                            startmatstartemp=int(mat2seqnomir.find(curmatseq)) #CAVH
+                            startmatstart=startmatstartemp + update_index
                             endmatstar=startmatstar+len(curmatseq)-1
                             second = 'Found'
                             log.debug(logid+str(["heres new",startmatstar,endmatstar,curmatseq]))
@@ -3743,7 +3782,7 @@ def sublist(filename):
                         startmat=userflanking
                         startfinalseq=startmattemp-(startmat-userflanking)
 
-                    endmat=startmat+len(curmatseq)-1
+                    endmat=(startmat+len(curmatseq))-1
                     tempseq=mat1seq[startfinalseq:]
                     tempnomirseq=mat1seq[endmat:] #CAVH fragment without detected mir
                     updateindexnomirregion = int(tempseq.find(tempnomirseq)) #CAVH start of no mir region on tempseq context
@@ -3884,9 +3923,13 @@ def sublist(filename):
                         #sys.exit(1)
 
                     log.debug(["coor1temp",longseq,curmatseq])
-                    coortemp1=int(longseq.index(curmatseq))
-                    coortemp2=int(longseq.index(curmatstar))
-
+                    #coortemp1=int(longseq.index(curmatseq))
+                    #coortemp2=int(longseq.index(curmatstar))
+                    #CAVH                    
+                    (coortemp1, coortemp2, finalseq) = find_positions(longseq, mat2seq,
+                                                 curmatseq, curmatstar,
+                                                 userflanking)
+                    
                     #if coortemp1 == -1 or coortemp2 == -1:
                     #    log.error(logid+'Not possible to locate miR or miR* in '+curmatID+' with '+ longseq +" and "+curmatseq+ " and "+ curmatstar)
                     #    sys.exit()
@@ -3895,27 +3938,28 @@ def sublist(filename):
                         tempseqex=curmatseq[:]
                         curmatseq=curmatstar[:]
                         curmatstar=tempseqex[:]
+                        
+                    #CAVH   
+                    #startmatlong=int(longseq.find(curmatseq))
+                    #startfinalseq=startmatlong-userflanking
+                    #startmat=userflanking
+                    #endmat=(startmat+len(curmatseq))-1
+                    #endmatlong=int(startmatlong + len(curmatseq)-1) #CAVH exlude all
+                    #templongseq=longseq[startfinalseq:]
+                    #templongnomirseq=longseq[endmatlong:] #CAVH portion without mir
+                    #contextlongmature = int(templongseq.find(templongnomirseq)) #CAVH update coordinates on mir context
+                    #log.debug(["curmat long",mat1seq,curmatseq,longseq])
+                    #log.debug(['coor long',startmat,endmat])
 
-                    startmatlong=int(longseq.find(curmatseq))
-                    startfinalseq=startmatlong-userflanking
-                    startmat=userflanking
-                    endmat=(startmat+len(curmatseq))-1
-                    endmatlong=int(startmatlong + len(curmatseq)-1) #CAVH exlude all
-                    templongseq=longseq[startfinalseq:]
-                    templongnomirseq=longseq[endmatlong:] #CAVH portion without mir
-                    contextlongmature = int(templongseq.find(templongnomirseq)) #CAVH update coordinates on mir context
-                    log.debug(["curmat long",mat1seq,curmatseq,longseq])
-                    log.debug(['coor long',startmat,endmat])
-
-                    #startmatstarlong=int(templongseq.find(curmatstar))
-                    startmatstarlong=int(templongnomirseq.find(curmatstar))
-                    endmatstarlong=int(startmatstarlong+len(curmatstar)-1)
-                    endfinalseq=endmatstarlong+userflanking
-                    endfinalseqcontex=endfinalseq + contextlongmature #CAVH
-                    finalseq = str(templongseq[:endfinalseqcontex+1]) #CAVH
+                    #startmatstarlong=int(templongseq.find(curmatstar)) # CAVH
+                    #startmatstarlong=int(templongnomirseq.find(curmatstar))
+                    #endmatstarlong=int(startmatstarlong+len(curmatstar)-1)
+                    #endfinalseq=endmatstarlong+userflanking
+                    #endfinalseqcontex=endfinalseq + contextlongmature #CAVH
+                    #finalseq = str(templongseq[:endfinalseqcontex+1]) #CAVH
                     #finalseq=str(templongseq[:endfinalseq+1])
-
-                    log.debug(["final seq",finalseq,curmatstar,endfinalseq+1])
+                    #log.debug(["final seq",finalseq,curmatstar,endfinalseq+1])
+                    
                     ### CAVH
                     #Look for mir in final seq:
                     startmirfinal = int(finalseq.find(curmatseq))
@@ -3926,14 +3970,16 @@ def sublist(filename):
                     startmirstarfinal = subsetnomir.find(curmatstar)
                     endmirstarfinal = int(startmirstarfinal + len(curmatstar) - 1)
                     #update coordinates 
+                    startmat=startmirfinal
+                    endmat=endmirfinal
                     startmatstar = startmirstarfinal + indexupdate
                     endmatstar = endmirstarfinal + indexupdate                    
                     #startmatstar=int(finalseq.find(curmatstar))
                     #endmatstar=int(startmatstar+len(curmatstar)-1)
                     #CAVH
-                    log.debug(['coor',startmatstar,endmatstar,startmatstarlong,endmatstarlong])
+                    log.debug(['coor',startmat, endmat, startmatstar,endmatstar])
 
-                    if star and nstar and  startmatstar!=-1 and endmatstar!=-1 and startmatstar>endmat:
+                    if star and nstar and startmatstar!=-1 and endmatstar!=-1 and startmatstar>endmat:
                         list1matcoor.append(curmatID.strip())#mat original
                         list1matcoor.append(curmatsplit[1].strip())#matstarID
                         list1matcoor.append(startmat)
@@ -3965,7 +4011,7 @@ def sublist(filename):
 
                     elif (not star and nstar) or startmatstar==-1 or endmatstar==-1:
                         startmat=int(mat1seq.find(curmatseq))
-                        endmat=startmat+len(curmatseq)-1
+                        endmat=(startmat+len(curmatseq))-1
                         finalseq=mat1seq
                         startmstar=0
                         endmatstar=len(mat1seq)-1
@@ -4709,6 +4755,186 @@ def parseargs():
         sys.exit(1)
 
     return parser.parse_args()
+
+### CAVH functions
+
+def count_repetitions(longseq,pattern):
+    results=0
+    len_pattern = len(pattern)
+    for i in range(len(longseq)):
+        if longseq[i:i+len_pattern] == pattern:
+            results = results + 1
+    return results
+
+
+def search_pattern(longseq, pattern):
+    start = longseq.find(pattern)
+    end = int((start + len(pattern)) -1)
+    return (start, end)
+
+
+def generate_array(longseq, pattern, number, mode):
+    pattern_len = len(pattern)
+    array = []
+    short_sequence = None
+    update_index = None
+    for j in range(0, number):  # (0, n-1)
+        if j == 0:  # Search on the complete sequence
+            start = longseq.find(pattern)
+            end = int((start + pattern_len) - 1)
+            assembly_data = [start, end, mode]
+            array.append(assembly_data)
+            short_sequence = longseq[end + 1:]
+            update_index = longseq.find(short_sequence)
+        else:
+            start_temp = short_sequence.find(pattern)
+            end_temp = int((start_temp + pattern_len) - 1)
+            start = int(start_temp + update_index)
+            end = int(end_temp + update_index)
+            assembly_data = [start, end, mode]
+            array.append(assembly_data)
+            short_sequence = short_sequence[end_temp + 1:]
+            update_index = longseq.find(short_sequence)
+    return array
+
+
+def detect_overlapp_in_array(complete_array):
+    columns = len(complete_array)
+    for i in range(0, columns -1):
+        if complete_array[i+1][0] in range(complete_array[i][0],
+           complete_array[i][1] + 1):
+            return 1
+    return 0
+
+
+def detect_pairs(complete_array, longseq, mat1seq, curmatseq, curmatstar):
+    columns = len(complete_array)  # Complete number columns
+    # Detect overlapping
+    overlapping = detect_overlapp_in_array(complete_array)
+    pair = defaultdict(dict)
+    number_pair = 0
+    if overlapping == 0:
+        for i in range(0, columns-1):  # In array =columns -1,range not reach end#
+            if complete_array[i][-1] != complete_array[i+1][-1]:
+                pair[number_pair] = [complete_array[i], complete_array[i+1]]
+                number_pair = number_pair + 1
+    else:  # At least one pair overlapped with another one
+        substring = None
+        update_index = None
+        for j in range(0, columns -1):  # (0, n-1)
+            if j == 0:  # Search on the complete sequence
+                identity_first = complete_array[j][-1]  # M or S
+                if identity_first == "M":
+                    start_m = longseq.find(curmatseq)  # Start M
+                    end_m = (start_m + len(curmatseq)) - 1  # End M
+                    substring = longseq[end_m + 1:]  # Restrict seq no M
+                    start_temp_s = substring.find(curmatstar)  # Detect start S
+                    update_index = longseq.find(substring)  # Get index
+                    start_s = start_temp_s + update_index  # Update index S
+                    end_s = (start_s + len(curmatstar)) -1
+                    element1 = [start_m, end_m, "M"]
+                    element2 = [start_s, end_s, "S"]
+                    pair[number_pair] = [element1, element2]
+                    number_pair = number_pair + 1
+                else:  # When S is first, search M
+                    start_s = longseq.find(curmatstar)  # Start S
+                    end_s = (start_s + len(curmatstar))-1  # End S
+                    substring = longseq[end_s + 1:]  # Restrict seq no S
+                    update_index = longseq.find(substring)
+                    start_temp_m = substring.find(curmatseq)  # Search M
+                    start_m = start_temp_m + update_index  # Start M
+                    end_m = (start_m + len(curmatseq)) - 1  # End M
+                    element1 = [start_s, end_s, "S"]
+                    element2 = [start_m, end_m, "M"]
+                    pair[number_pair] = [element1, element2]
+                    number_pair = number_pair + 1
+            else:  # This is not the first element
+                if complete_array[j][0] in range(complete_array[j-1][0],
+                                                 complete_array[j-1][1]):
+                    continue
+                else:
+                    identity_first = complete_array[j][-1]  # M or S
+                    if identity_first == "M":
+                        start_temp_m = substring.find(curmatseq)  # Start M in sub
+                        end_temp_m = (start_temp_m + len(curmatseq)) - 1
+                        start_m = start_temp_m + update_index  # Updated M Start
+                        end_m = (start_m + len(curmatseq)) - 1  # Updated M end
+                        substring = substring[end_temp_m + 1:]   # String no start M
+                        update_index = longseq.find(substring)
+                        start_temp_s = substring.find(curmatstar)
+                        if (start_temp_s == -1):  # Not possible to map S
+                            continue
+                        start_s = start_temp_s + update_index  # Updated start S
+                        end_s = (start_s + len(curmatstar)) -1  # Updated end S
+                        element1 = [start_m, end_m, "M"]
+                        element2 = [start_s, end_s, "S"]
+                        pair[number_pair] = [element1, element2]
+                        number_pair = number_pair + 1
+                    else:  # When S is first, search M
+                        start_temp_s = substring.find(curmatstar)  # Start M in sub
+                        end_temp_s = (start_temp_s + len(curmatstar)) - 1
+                        start_s = start_temp_s + update_index  # Updated S Start
+                        end_s = (start_s + len(curmatstar)) - 1  # Updated S end
+                        substring = substring[end_temp_s + 1:]   # String no start S
+                        update_index = longseq.find(substring)
+                        start_temp_m = substring.find(curmatseq)
+                        start_m = start_temp_m + update_index  # Update start M
+                        if (start_temp_m == -1):  # Not possible to map M
+                            continue
+                        end_m = (start_s + len(curmatseq)) -1  # Updated end M
+                        element1 = [start_s, end_s, "S"]
+                        element2 = [start_m, end_m, "M"]
+                        pair[number_pair] = [element1, element2]
+                        number_pair = number_pair + 1
+    return (pair, number_pair)
+
+
+def define_best_pair(pairs, distances_loop, startprecursor,
+                     endprecursor, precursorlen, flanking, longseq):
+    all_distances_sorted = sorted(distances_loop, key=itemgetter(-1))
+    for i in range(len(all_distances_sorted)):
+        if (all_distances_sorted[i][1][0][0] in range(startprecursor, endprecursor + 1)
+                and all_distances_sorted[i][1][0][1] in range(startprecursor, endprecursor + 1)
+                and all_distances_sorted[i][1][1][0] in range(startprecursor, endprecursor + 1)
+                and all_distances_sorted[i][1][1][1] in range(startprecursor, endprecursor + 1)):
+            coord1 = all_distances_sorted[i][1][0][0]
+            coord2 = all_distances_sorted[i][1][1][0]
+            finalcoord2 = all_distances_sorted[i][1][1][1]
+            startfinalseq = coord1-flanking
+            endfinalseq = finalcoord2+flanking
+            correctfinalseq = longseq[startfinalseq:endfinalseq+1]
+            break
+    return (coord1, coord2, correctfinalseq)
+
+
+def find_positions(longseq, mat1seq, curmatseq, curmatstar, flanking):
+    # Features sequences
+    precursorlen = len(mat1seq)
+    # Locate
+    startprecursor = longseq.find(mat1seq)
+    endprecursor = int((startprecursor + precursorlen)-1)
+    # Search the number of substrings along the long sequence
+    mir = count_repetitions(longseq,curmatseq)
+    mirstar = count_repetitions(longseq,curmatstar)
+    mir_array = generate_array(longseq, curmatseq, mir, "M")
+    mirstar_array = generate_array(longseq, curmatstar, mirstar, "S")
+    # All array
+    all_array = mir_array + mirstar_array
+    all_array_sorted = sorted(all_array, key=itemgetter(0))
+    (pairs, number_pairs) = detect_pairs(all_array_sorted, longseq,
+                                         mat1seq, curmatseq, curmatstar)
+    distances_loop = []
+    for pair in pairs:
+        loopsize = abs(pairs[pair][0][1] - pairs[pair][1][0]) - 1
+        distances_loop.append([pair, pairs[pair], loopsize])
+    (coord1, coord2, correctfinalseq) = define_best_pair(pairs, distances_loop,
+                                                         startprecursor,
+                                                         endprecursor,
+                                                         precursorlen,
+                                                         flanking,
+                                                         longseq)
+    return (coord1, coord2, correctfinalseq)
+
 
 ##############################MAIN##############################
 
