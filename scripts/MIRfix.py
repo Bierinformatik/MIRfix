@@ -158,12 +158,14 @@ def getindex2mat(sequence,specie,precID,precdesc,listnogenomes,listnotingenome):
             for gen in listofgenomes:
                 filer=openfile(gen)
                 fread = SeqIO.parse(filer,"fasta")
-                precind = None
-                precind = str(i.seq).find(sequence)
+                #precind = None
+                #precind = str(i.seq).find(sequence)
                 rep_str  = re.compile("T", re.IGNORECASE)
                 for i in fread:
                     if "U" in str(i.seq).upper() and  "T" in str(i.seq).upper() :
                         i.seq=Seq(rep_str.sub("U",str(i.seq)))
+                    precind = None
+                    precind = str(i.seq).find(sequence)
                     if precind > 0:
                         log.debug(["in genome",precID])
                         flagseq=1
@@ -3684,22 +3686,19 @@ def sublist(filename):
                     mtf = openfile(matfile)
                     first = None
                     second = None
-                    update_index = None #CAVH
-                    mat2seqnomir = None #CAVH
+                    #Here use index because both matures were reported at the
+                    #Beginning
                     for record in SeqIO.parse(mtf, 'fasta'):
                         curmatseq=str(record.seq)
                         if firstmat.strip() in record.description:
-                            startmat=int(mat2seq.find(curmatseq))
-                            endmat=startmat+len(curmatseq)-1
-                            mat2seqnomir = mat2seq[endmat + 1:] #CAVH
-                            update_index = mat2seq.find(mat2seqnomir) #CAVH
+                            startmat=int(mat2seq.index(curmatseq))
+                            endmat=(startmat+len(curmatseq))-1
                             first = 'Found'
                             log.debug(logid+str(["heres new",mat2seq,startmat,endmat,curmatseq]))
 
                         if lastmat.strip() in record.description:
-                            startmatstartemp=int(mat2seqnomir.find(curmatseq)) #CAVH
-                            startmatstart=startmatstartemp + update_index
-                            endmatstar=startmatstar+len(curmatseq)-1
+                            startmatstar = int(mat2seq.index(curmatseq))
+                            endmatstar=(startmatstar+len(curmatseq))-1
                             second = 'Found'
                             log.debug(logid+str(["heres new",startmatstar,endmatstar,curmatseq]))
 
