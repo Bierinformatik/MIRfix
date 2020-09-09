@@ -62,10 +62,10 @@ def getindex(sequence,specie,precID,precdesc,listnogenomes,listnotingenome,templ
             for gen in listofgenomes:
                 filer=openfile(gen)
                 fread = SeqIO.parse(filer,"fasta")
+                rep_str  = re.compile("T", re.IGNORECASE)  # replacement for mixed, now we replace all T with U in case T and U are in string
                 for i in fread:
-                    mixed=False
                     if "U" in str(i.seq).upper() and  "T" in str(i.seq).upper() :
-                        mixed=True
+                        i.seq=Seq(rep_str.sub("U",str(i.seq)))
                     precind = None
                     precind = str(i.seq).find(sequence)
 
@@ -94,35 +94,32 @@ def getindex(sequence,specie,precID,precdesc,listnogenomes,listnotingenome,templ
                         return returnlst,listnogenomes,listnotingenome,templong,minusstrand #minus strand
 
                     else:       # We search for the reverse complement now
-                        #precind = str(i.seq).find(str(Seq(sequence).reverse_complement()))
-                        #if "U" in str(i.seq).upper() and  "T" in str(i.seq).upper() :
-                        if not mixed:
-                            precind =  str((i.seq).reverse_complement()).find(sequence) #minus strand
-                            if precind > 0:
-                                log.debug(["in minus genome",precID])
-                                flagseq=1
-                                #gseq=str(i.seq)
-                                gseq=str((i.seq).reverse_complement()) #minus strand
-                                cutlongbefore=250
-                                cutlongafter=250
-                                beforeseq=len(gseq[:precind])
-                                afterseq=len(gseq[precind+len(sequence):])
+                        precind =  str((i.seq).reverse_complement()).find(sequence) #minus strand
+                        if precind > 0:
+                            log.debug(["in minus genome",precID])
+                            flagseq=1
+                            #gseq=str(i.seq)
+                            gseq=str((i.seq).reverse_complement()) #minus strand
+                            cutlongbefore=250
+                            cutlongafter=250
+                            beforeseq=len(gseq[:precind])
+                            afterseq=len(gseq[precind+len(sequence):])
 
-                                if beforeseq<cutlongbefore:
-                                    cutlongbefore=beforeseq
+                            if beforeseq<cutlongbefore:
+                                cutlongbefore=beforeseq
 
-                                if afterseq<cutlongafter:
-                                    cutlongafter=afterseq
+                            if afterseq<cutlongafter:
+                                cutlongafter=afterseq
 
-                                #longseq=str(Seq(gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]).reverse_complement())  # we now search for the reverse complement and return this
-                                longseq=str(gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]) #minus strand
-                                templong.append(precID.strip())
-                                templong.append(str(longseq))
-                                returnlst.append(precind)
-                                returnlst.append(str(i.id))
-                                returnlst.append(str(gen))
-                                minusstrand=True #minus strand
-                                return returnlst,listnogenomes,listnotingenome,templong,minusstrand #minus strand
+                            #longseq=str(Seq(gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]).reverse_complement())  # we now search for the reverse complement and return this
+                            longseq=str(gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]) #minus strand
+                            templong.append(precID.strip())
+                            templong.append(str(longseq))
+                            returnlst.append(precind)
+                            returnlst.append(str(i.id))
+                            returnlst.append(str(gen))
+                            minusstrand=True #minus strand
+                            return returnlst,listnogenomes,listnotingenome,templong,minusstrand #minus strand
 
         if flagseq==0 and flaggenome==1:
             listnotingenome.append(precID)
@@ -161,13 +158,12 @@ def getindex2mat(sequence,specie,precID,precdesc,listnogenomes,listnotingenome):
             for gen in listofgenomes:
                 filer=openfile(gen)
                 fread = SeqIO.parse(filer,"fasta")
+                precind = None
+                precind = str(i.seq).find(sequence)
+                rep_str  = re.compile("T", re.IGNORECASE)
                 for i in fread:
-                    mixed=False
                     if "U" in str(i.seq).upper() and  "T" in str(i.seq).upper() :
-                        mixed=True
-                    precind = None
-                    precind = str(i.seq).find(sequence)
-
+                        i.seq=Seq(rep_str.sub("U",str(i.seq)))
                     if precind > 0:
                         log.debug(["in genome",precID])
                         flagseq=1
@@ -186,28 +182,26 @@ def getindex2mat(sequence,specie,precID,precdesc,listnogenomes,listnotingenome):
                         longseq=gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]
                         return (str(longseq)),listnogenomes,listnotingenome
                     else:       # We search for the reverse complement now
-                        #precind = str(i.seq).find(str(Seq(sequence).reverse_complement()))
-                        if not mixed:
-                            precind =  str((i.seq).reverse_complement()).find(sequence) #minus strand
-                            if precind > 0:
-                                log.debug(["in minus genome",precID])
-                                flagseq=1
-                                #gseq=str(i.seq)
-                                gseq=str((i.seq).reverse_complement()) #minus strand
-                                cutlongbefore=100
-                                cutlongafter=100
-                                beforeseq=len(gseq[:precind])
-                                afterseq=len(gseq[precind+len(sequence):])
+                        precind =  str((i.seq).reverse_complement()).find(sequence) #minus strand
+                        if precind > 0:
+                            log.debug(["in minus genome",precID])
+                            flagseq=1
+                            #gseq=str(i.seq)
+                            gseq=str((i.seq).reverse_complement()) #minus strand
+                            cutlongbefore=100
+                            cutlongafter=100
+                            beforeseq=len(gseq[:precind])
+                            afterseq=len(gseq[precind+len(sequence):])
 
-                                if beforeseq<cutlongbefore:
-                                    cutlongbefore=beforeseq
+                            if beforeseq<cutlongbefore:
+                                cutlongbefore=beforeseq
 
-                                if afterseq<cutlongafter:
-                                    cutlongafter=afterseq
+                            if afterseq<cutlongafter:
+                                cutlongafter=afterseq
 
-                                #longseq=str(Seq(gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]).reverse_complement())  # we now search for the reverse complement and return this
-                                longseq=str(gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]) #minus strand
-                                return (str(longseq)),listnogenomes,listnotingenome
+                            #longseq=str(Seq(gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]).reverse_complement())  # we now search for the reverse complement and return this
+                            longseq=str(gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]) #minus strand
+                            return (str(longseq)),listnogenomes,listnotingenome
 
         if flagseq==0 and flaggenome==1:
             listnotingenome.append(precID)
@@ -2196,7 +2190,7 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
                 mirstarepos=mirstarepos-(mirstarepos-spos+1)
 
             #if mirstarspos<=0: #CAVH the position is better before last definition
-            #    mirstarspos=0  
+            #    mirstarspos=0
 
             mirstarspos = comp_5p(lstr, lstl, spos, mirstarspos, precursor, 1)  # Comparing 5'ends of mir and mir*
             mirstar=precursor[mirstarspos:mirstarepos+1]
@@ -3237,7 +3231,7 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                 #log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
                 #correctfinalseq=str(templongseq[:endfinalseq+1])
                 #correctfinalseq=str(templongseq[:endfinalseqcontex+1]) #CAVH
-                
+
                 #CAVH: Avoid overlapping on precursor:
                 start_mir = correctfinalseq.find(correctmir)
                 end_mir = (start_mir + len(correctmir)) - 1
@@ -3245,7 +3239,7 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                 index_to_update = correctfinalseq.find(correctfinalseqnomir)
                 listmisalignedcorr.append(corriddes)
                 listmisalignedcorr.append(correctfinalseq)
-                listmisalignedcorr.append(int(start_mir)) 
+                listmisalignedcorr.append(int(start_mir))
                 listmisalignedcorr.append(int(end_mir))
                 #listmisalignedcorr.append(int(correctfinalseq.find(correctmir))) #CAVH
                 #listmisalignedcorr.append(int(correctfinalseq.find(correctmir))+len(correctmir)) #CAVH
@@ -3300,8 +3294,8 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                 #endfinalseqcontex=endfinalseq + contextlongmature #CAVH
                 #log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
                 #correctfinalseq=str(templongseq[:endfinalseq+1])
-                #correctfinalseq=str(templongseq[:endfinalseqcontex+1]) #CAVH 
-                
+                #correctfinalseq=str(templongseq[:endfinalseqcontex+1]) #CAVH
+
                 start_mir = correctfinalseq.find(correctmir)
                 end_mir = (start_mir + len(correctmir)) - 1
                 correctfinalseqnomir = correctfinalseq[end_mir + 1:]
@@ -3312,7 +3306,7 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                 #listmisalignedcorr.append(int(correctfinalseq.find(correctmir))+len(correctmir)) #CAVH
                 #listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar))) #CAVH
                 #listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar))+len(correctmirstar)) #CAVH
-                listmisalignedcorr.append(int(start_mir)) 
+                listmisalignedcorr.append(int(start_mir))
                 listmisalignedcorr.append(int(end_mir))
                 start_mirstar_temp = correctfinalseqnomir.find(correctmirstar)
                 star_mirstar = start_mirstar_temp + index_to_update
@@ -3793,7 +3787,7 @@ def sublist(filename):
                         #startmatstar=int(tempseq.find(curmatstar))
                         startmatstar=int(tempnomirseq.find(curmatstar)) #CAVH search on region without mir
                         #endmatstar=startmatstar+int(len(curmatstar)-1)
-                        endmatstar = startmatstar+int(len(curmatstar)-1) + updateindexnomirregion #CAVH 
+                        endmatstar = startmatstar+int(len(curmatstar)-1) + updateindexnomirregion #CAVH
                         numberendflank=int(len(tempseq)-endmatstar-1)
 
                         if numberendflank<=userflanking:
@@ -3925,11 +3919,11 @@ def sublist(filename):
                     log.debug(["coor1temp",longseq,curmatseq])
                     #coortemp1=int(longseq.index(curmatseq))
                     #coortemp2=int(longseq.index(curmatstar))
-                    #CAVH                    
+                    #CAVH
                     (coortemp1, coortemp2, finalseq) = find_positions(longseq, mat2seq,
                                                  curmatseq, curmatstar,
                                                  userflanking)
-                    
+
                     #if coortemp1 == -1 or coortemp2 == -1:
                     #    log.error(logid+'Not possible to locate miR or miR* in '+curmatID+' with '+ longseq +" and "+curmatseq+ " and "+ curmatstar)
                     #    sys.exit()
@@ -3938,8 +3932,8 @@ def sublist(filename):
                         tempseqex=curmatseq[:]
                         curmatseq=curmatstar[:]
                         curmatstar=tempseqex[:]
-                        
-                    #CAVH   
+
+                    #CAVH
                     #startmatlong=int(longseq.find(curmatseq))
                     #startfinalseq=startmatlong-userflanking
                     #startmat=userflanking
@@ -3959,7 +3953,7 @@ def sublist(filename):
                     #finalseq = str(templongseq[:endfinalseqcontex+1]) #CAVH
                     #finalseq=str(templongseq[:endfinalseq+1])
                     #log.debug(["final seq",finalseq,curmatstar,endfinalseq+1])
-                    
+
                     ### CAVH
                     #Look for mir in final seq:
                     startmirfinal = int(finalseq.find(curmatseq))
@@ -3969,11 +3963,11 @@ def sublist(filename):
                     #Look mirstar in final seq
                     startmirstarfinal = subsetnomir.find(curmatstar)
                     endmirstarfinal = int(startmirstarfinal + len(curmatstar) - 1)
-                    #update coordinates 
+                    #update coordinates
                     startmat=startmirfinal
                     endmat=endmirfinal
                     startmatstar = startmirstarfinal + indexupdate
-                    endmatstar = endmirstarfinal + indexupdate                    
+                    endmatstar = endmirstarfinal + indexupdate
                     #startmatstar=int(finalseq.find(curmatstar))
                     #endmatstar=int(startmatstar+len(curmatstar)-1)
                     #CAVH
@@ -4129,7 +4123,7 @@ def sublist(filename):
                 ndhalfsum=ndhalfgaps+ndhalfsum
                 numofseqs=numofseqs+1
             log.debug([sthalfsum,ndhalfsum,totalstnucnum,totalndnucnum])
-            # CAVH: Here calculated the average of nt on left side of align (stnucavg) and on the right side (ndnucavg) on the alignment 
+            # CAVH: Here calculated the average of nt on left side of align (stnucavg) and on the right side (ndnucavg) on the alignment
             stnucavg=totalstnucnum/numofseqs
             ndnucavg=totalndnucnum/numofseqs
             alignment=AlignIO.read(outdir+filename.strip()+'.stk',"stockholm")
