@@ -3011,8 +3011,7 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
 def doalifold(alnfile,outdir):
     logid = scriptname+'.doalifold: '
     try:
-        #f=os.popen("RNAalifold --noPS -r "+alnfile)
-        f=os.popen("RNAalifold --noPS "+alnfile)
+        f=os.popen("RNAalifold --noPS -r "+alnfile) # -r = RIBOSUM scoring
         alifoldtemp=outdir+'alifoldtemp.txt'
         foldrestemp=open(alifoldtemp,'w')
         fi=f.read()
@@ -4070,7 +4069,7 @@ def sublist(filename):
         if matrdir:
             fs=os.environ["DIALIGN2_DIR"]=matrdir
             log.debug(matrdir)
-        f1=os.popen("dialign2-2 -n -fa  "+outdir+filename.strip()+'-Final.fasta')
+        f1=os.popen("dialign2-2 -n -anc -fa "+outdir+filename.strip()+'-Final.fasta')
         log.debug(f1)
         f1.close()
 
@@ -4221,7 +4220,7 @@ def sublist(filename):
             finalstkcorrected.write('# STOCKHOLM 1.0\n')
             if matrdir:
                 fe=os.environ["DIALIGN2_DIR"]=matrdir
-            f11=os.popen("dialign2-2 -n -fa  "+outdir+filename.strip()+'-corrected.fasta')
+            f11=os.popen("dialign2-2 -n -anc -fa  "+outdir+filename.strip()+'-corrected.fasta')
             f11.close()
 
             doalifold(outdir+filename.strip()+"-corrected.fa",outdir)
@@ -4757,7 +4756,8 @@ def count_repetitions(longseq,pattern):
     len_pattern = len(pattern)
     for i in range(len(longseq)):
         if longseq[i:i+len_pattern] == pattern:
-            results = results + 1
+            results += 1
+            print(longseq[i:i+len_pattern],i,i+len_pattern)
     return results
 
 
@@ -4782,13 +4782,14 @@ def generate_array(longseq, pattern, number, mode):
             update_index = longseq.find(short_sequence)
         else:
             start_temp = short_sequence.find(pattern)
-            end_temp = int((start_temp + pattern_len) - 1)
-            start = int(start_temp + update_index)
-            end = int(end_temp + update_index)
-            assembly_data = [start, end, mode]
-            array.append(assembly_data)
-            short_sequence = short_sequence[end_temp + 1:]
-            update_index = longseq.find(short_sequence)
+            if start_temp != -1:
+                end_temp = int((start_temp + pattern_len) - 1)
+                start = int(start_temp + update_index)
+                end = int(end_temp + update_index)
+                assembly_data = [start, end, mode]
+                array.append(assembly_data)
+                short_sequence = short_sequence[end_temp + 1:]
+                update_index = longseq.find(short_sequence)
     return array
 
 
