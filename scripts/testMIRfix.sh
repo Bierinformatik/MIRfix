@@ -4,15 +4,15 @@ location=${1:-${PWD}}				# Working directory DEFAULT is current working director
 cores=${2:-1}					# Numer of cores used for multithreading DEFAULT is 1
 extension=${3:-10}				# Number of nucleotides for extension/trimming of precursor from genomic sequence
 
-echo "Creating output directory ${location}/output"
-mkdir -p ${location}/output
-
 echo "Running MIRfix with ${cores} cores, ${extension}nt extension at ${location}"
 
-cp mature.fa test.fa
-cp mapping.txt test.mapping
+cp mature.fa maturetest.fa
+cp mapping.txt mappingtest.txt
 
-python2 MIRfix.py ${cores} ${location}/output/ ${location}/Families/ ${location}/listoffamilies.txt ${location}/fasta_to_search.txt ${location}/mapping_between_precursor_and_families.txt ${location}/mature_sequences.fa ${extension}
+python3 MIRfix.py3 -j ${cores} -o ${location}/Test_output/ -i ${location}/Families/ -f ${location}/list.txt -g ${location}/genomes_list.txt -m ${location}/mappingtest.txt -a ${location}/maturetest.fa -e ${extension}
 
-rm -f test.fa
-rm -f test.mapping
+echo "Found "`diff mature.fa maturetest.fa`
+echo "At "`diff mapping.txt mappingtest.txt
+
+echo -e "\nCleanup\n"
+rm -f maturetest.fa mappingtest.txt`
