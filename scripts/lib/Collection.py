@@ -370,7 +370,6 @@ def count_repetitions(longseq,pattern):
     for i in range(len(longseq)):
         if longseq[i:i+len_pattern] == pattern:
             results += 1
-            print(longseq[i:i+len_pattern],i,i+len_pattern)
     return results
 
 def search_pattern(longseq, pattern):
