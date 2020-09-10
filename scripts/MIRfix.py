@@ -4459,7 +4459,8 @@ if __name__ == '__main__':
         pool = multiprocessing.Pool(processes=nthreads, maxtasksperchild=1)
 
         for fam in lfams:
-            pool.apply_async(sublist, args=(fam))
+            sublist(fam)
+            #pool.apply_async(sublist, args=(fam))
             log.info('Working on '+str(fam))
         pool.close()
         pool.join()
