@@ -4,6 +4,7 @@ import os, sys, inspect
 import traceback as tb
 
 log = multiprocessing.get_logger()  # does not take name argument
+log.addHandler(logging.StreamHandler(sys.stderr))
 
 def makelogdir(logdir):
     if not os.path.isabs(logdir):
