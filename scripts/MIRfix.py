@@ -26,13 +26,13 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio import AlignIO
 from Bio.Align.Applications import ClustalwCommandline
-#logging
+
+#Logging
 import datetime
-from lib.logger import makelogdir, setup_multiprocess_logger
-# Create log dir
-makelogdir('LOGS')
-scriptname=os.path.basename(__file__)
-##import own modules
+from lib.logger import makelogdir, setup_multiprocess_logger, checklog
+
+scriptname = os.path.basename(__file__).replace('.py','')
+##load own modules
 from lib.Collection import *
 
 def getindex(sequence, specie, precID, precdesc, listnogenomes, listnotingenome, templong, args):#get the index of the original sequence in its genome
@@ -4415,7 +4415,6 @@ def parseargs():
 if __name__ == '__main__':
 
     logid = scriptname+'.main: '
-
     try:
         set_start_method("spawn")  # set multiprocessing start method to safe spawn
         args=parseargs()
@@ -4453,8 +4452,8 @@ if __name__ == '__main__':
         pool = multiprocessing.Pool(processes=nthreads, maxtasksperchild=1)
 
         for fam in lfams:
-            pool.apply_async(sublist, args=(fam, args))
             log.info('Working on '+str(fam))
+            pool.apply_async(sublist, args=(fam, args))            
         pool.close()
         pool.join()
 

@@ -6,14 +6,12 @@ import heapq
 from operator import itemgetter
 from natsort import natsorted, ns
 import traceback as tb
-import sys
 import re
 import pprint
-from io import StringIO
-import os
 import gzip
 import math
 from collections import defaultdict
+from io import StringIO
 ##import Bio modules
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -22,9 +20,19 @@ from Bio.Align.Applications import ClustalwCommandline
 ##import ViennaRNA
 import RNA
 
-scriptname = os.path.basename(inspect.stack()[-1].filename).replace('.py','')
+try:
+    scriptname = os.path.basename(inspect.stack()[-1].filename).replace('.py','')
+except Exception as err:
+    exc_type, exc_value, exc_tb = sys.exc_info()
+    tbe = tb.TracebackException(
+        exc_type, exc_value, exc_tb,
+    )
+    print(''.join(tbe.format()),file=sys.stderr)
 
-# Code:All subs from here on
+############################################################
+######################## Functions #########################
+############################################################
+
 #Files
 def openfile(f):
     logid = scriptname+'.openfile: '
