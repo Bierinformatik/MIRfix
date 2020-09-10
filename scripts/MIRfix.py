@@ -26,8 +26,6 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio import AlignIO
 from Bio.Align.Applications import ClustalwCommandline
-##import ViennaRNA
-import RNA
 #logging
 import datetime
 from lib.logger import makelogdir, setup_multiprocess_logger
@@ -37,7 +35,7 @@ scriptname=os.path.basename(__file__)
 ##import own modules
 from lib.Collection import *
 
-def getindex(sequence,specie,precID,precdesc,listnogenomes,listnotingenome,templong):#get the index of the original sequence in its genome
+def getindex(sequence, specie, precID, precdesc, listnogenomes, listnotingenome, templong, args):#get the index of the original sequence in its genome
     logid = scriptname+'.getindex: '
     try:
         specieitem=specie.split()
@@ -133,7 +131,7 @@ def getindex(sequence,specie,precID,precdesc,listnogenomes,listnotingenome,templ
         log.error(logid+''.join(tbe.format()))
 
 
-def getindex2mat(sequence,specie,precID,precdesc,listnogenomes,listnotingenome):#get the index of the original sequence in its genome
+def getindex2mat(sequence, specie, precID, precdesc, listnogenomes, listnotingenome, args):#get the index of the original sequence in its genome
     logid = scriptname+'.getindex2mat: '
     try:
         specieitem=specie.split()
@@ -216,7 +214,7 @@ def getindex2mat(sequence,specie,precID,precdesc,listnogenomes,listnotingenome):
         log.error(logid+''.join(tbe.format()))
 
 
-def flip(filename,filen,outdir,mappingfile,matfile,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,list2mat,listnogenomes,listnotingenome,templong,listgoodnew):#file name is the family name
+def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, list2mat, listnogenomes, listnotingenome, templong, listgoodnew, args):#file name is the family name
     logid = scriptname+'.flip: '
     try:
         item=[]
@@ -276,7 +274,7 @@ def flip(filename,filen,outdir,mappingfile,matfile,listofnew,listofnewloop,listo
                 spos=str(precseq).find(matseq)#spos after cut
                 epos=spos+len(matseq)-1 #epos after cut
                 precseq=precseq.replace("U","T")#r
-                returnlst,listnogenomes,listnotingenome,templong,minusstrand=getindex(precseq,specie,precID,precDes,listnogenomes,listnotingenome,templong)# returns 3 values received, the first is the index of the sequence, the ID where this sequence found in the genome and the genome filename
+                returnlst,listnogenomes,listnotingenome,templong,minusstrand=getindex(precseq,specie,precID,precDes,listnogenomes,listnotingenome,templong, args)# returns 3 values received, the first is the index of the sequence, the ID where this sequence found in the genome and the genome filename
 
                 if precID not in listnogenomes and precID not in listnotingenome:
                     listnewold=[]
@@ -3011,11 +3009,9 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
         )
         log.error(logid+''.join(tbe.format()))
 
-def sublist(filename):
-    print('HERE')
+def sublist(filename, args):
     logid = scriptname+'.sublist: '
     log.debug(logid+'Starting to process '+str(filename))
-    print('HERE')
     try:
         filesdir=str(args.famdir)#dir for families
         command="list"
@@ -3196,9 +3192,9 @@ def sublist(filename):
                     os.remove(f)
 
             if len(listnomatremoved)>0:
-                listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listnogenomes,listnotingenome,templong,listgoodnew=flip(filename.strip(),outdir+filename+"-new.fa",outdir,mapfile,matfile,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,list2mat,listnogenomes,listnotingenome,templong,listgoodnew)
+                listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, listnogenomes, listnotingenome, templong, listgoodnew=flip(filename.strip(), outdir+filename+"-new.fa", outdir, mapfile, matfile, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, list2mat, listnogenomes, listnotingenome, templong, listgoodnew, args)
             else:
-                listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listnogenomes,listnotingenome,templong,listgoodnew=flip(filename.strip(),filen,outdir,mapfile,matfile,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,list2mat,listnogenomes,listnotingenome,templong,listgoodnew)
+                listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, listnogenomes, listnotingenome, templong, listgoodnew=flip(filename.strip(), filen, outdir, mapfile, matfile, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, list2mat, listnogenomes, listnotingenome, templong, listgoodnew, args)
 
         elif flagnomatexists and nomats==-1:
             log.debug(logid+"flagnomatexists"+str(flagnomatexists)+';'+str(nomats))
@@ -3207,7 +3203,7 @@ def sublist(filename):
 
         elif not flagnomatexists:
             log.debug(logid+str(["this flip",flagnomatexists]))
-            listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listnogenomes,listnotingenome,templong,listgoodnew=flip(filename.strip(),filen,outdir,mapfile,matfile,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,list2mat,listnogenomes,listnotingenome,templong,listgoodnew)#filename: filename/family, filen: the file itself(with the directory)
+            listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, listnogenomes, listnotingenome, templong, listgoodnew=flip(filename.strip(), filen, outdir, mapfile, matfile, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, list2mat, listnogenomes, listnotingenome, templong, listgoodnew, args)#filename: filename/family, filen: the file itself(with the directory)
 
         log.debug(logid+"listofnew: "+str(listofnew))
         if os.path.isfile(outdir+filename+"-new.fa"):
@@ -3275,7 +3271,7 @@ def sublist(filename):
 
                     if precID==pid:
                         long2matseq=""
-                        long2matseq,listnogenomes,listnotingenome=getindex2mat(pseq.replace("U","T"),specie,precID,precDes,listnogenomes,listnotingenome)  # from here on we have the reverse complement if seq on minus strand
+                        long2matseq, listnogenomes, listnotingenome=getindex2mat(pseq.replace("U", "T"), specie, precID, precDes, listnogenomes, listnotingenome, args)  # from here on we have the reverse complement if seq on minus strand
                         log.debug(logid+'long2matseq: '+str(long2matseq))
 
                         if long2matseq!="":
@@ -4450,7 +4446,6 @@ if __name__ == '__main__':
         with openfile(args.families) as filelist:
             for line in filelist:
                 lfams.append(line.strip())
-
         log.debug(logid+'Families to process: '+str(lfams))
 
         outd=args.outdir
@@ -4458,8 +4453,7 @@ if __name__ == '__main__':
         pool = multiprocessing.Pool(processes=nthreads, maxtasksperchild=1)
 
         for fam in lfams:
-            sublist(fam)
-            #pool.apply_async(sublist, args=(fam))
+            pool.apply_async(sublist, args=(fam, args))
             log.info('Working on '+str(fam))
         pool.close()
         pool.join()

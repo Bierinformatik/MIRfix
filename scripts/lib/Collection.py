@@ -19,6 +19,8 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio import AlignIO
 from Bio.Align.Applications import ClustalwCommandline
+##import ViennaRNA
+import RNA
 
 scriptname = os.path.basename(inspect.stack()[-1].filename).replace('.py','')
 
