@@ -2081,13 +2081,17 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
                 mirstarspos=mirstarspos+(epos-mirstarspos+1)
 
             if mirstarepos>len(precursor)-1:#To avoid mir* end position going outside the precursor
-                mirstarepos=len(precursor)-1
+                mirstarepos=len(precursor)-1 #TODO: what if after reduction mirstar is too short?
             mirstarspos = comp_5p(lstl, lstr, spos, mirstarspos, precursor, 1)  # Comparing 5'ends of mir and mir*
             mirstar=precursor[mirstarspos:mirstarepos+1]
             mirstar= mirstar.replace("T","U")#here it is minus because we are in the 3p arm, the sposstar is actually the last nucleotide in the mir* which is the firt one folding to mir
             log.debug(["get mirstar here 20",mirstar,mirstarspos,orien])
-            mirflag=True
-            return (str(mirstar),int(mirstarspos),int(mirstarepos),str(orien))
+            if len(mirstar) <= 20: #CAVH 
+                log.debug("no predicted mir*")
+                return "",-1,-1,'p'
+            else:
+                mirflag=True
+                return (str(mirstar),int(mirstarspos),int(mirstarepos),str(orien))
         #break
 
         elif orien=="3p":
