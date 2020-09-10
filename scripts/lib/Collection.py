@@ -495,7 +495,6 @@ def detect_pairs(complete_array, longseq, mat1seq, curmatseq, curmatstar):
                         number_pair = number_pair + 1
     return (pair, number_pair)
 
-
 def define_best_pair(pairs, distances_loop, startprecursor,
                      endprecursor, precursorlen, flanking, longseq):
     all_distances_sorted = sorted(distances_loop, key=itemgetter(-1))
@@ -504,14 +503,24 @@ def define_best_pair(pairs, distances_loop, startprecursor,
                 and all_distances_sorted[i][1][0][1] in range(startprecursor, endprecursor + 1)
                 and all_distances_sorted[i][1][1][0] in range(startprecursor, endprecursor + 1)
                 and all_distances_sorted[i][1][1][1] in range(startprecursor, endprecursor + 1)):
-            coord1 = all_distances_sorted[i][1][0][0]
-            coord2 = all_distances_sorted[i][1][1][0]
-            finalcoord2 = all_distances_sorted[i][1][1][1]
-            startfinalseq = coord1-flanking
-            endfinalseq = finalcoord2+flanking
+            coord1T = all_distances_sorted[i][1][0][0]
+            coord2T = all_distances_sorted[i][1][1][0]
+            finalcoord2T = all_distances_sorted[i][1][1][1]
+            startfinalseq = coord1T-flanking
+            endfinalseq = finalcoord2T+flanking
             correctfinalseq = longseq[startfinalseq:endfinalseq+1]
+            # Assign coord1 for mir and coord2 for mirstar
+            class1=all_distances_sorted[i][1][0][-1]
+            class2=all_distances_sorted[i][1][1][-1]
+            if class1 == "S":
+                #Now have S has to be on position2
+                coor1=coord2T
+                coor2=coord1T
+            else:
+                coor1=coord1T
+                coor2=coord2T
             break
-    return (coord1, coord2, correctfinalseq)
+    return (coor1, coor2, correctfinalseq)
 
 
 def find_positions(longseq, mat1seq, curmatseq, curmatstar, flanking):

@@ -3582,14 +3582,14 @@ def sublist(filename, args):
                                 curmatstar=str(starrec.seq)
                                 star=True
                                 break
-                            else:
-                                log.debug(logid+'Searching for curmatstar in '+str(starrec)+' with '+';'.join([curmatID.strip(),starrecID.strip(),resprecid.strip(),starrec.description]))
+                            #else:
+                            #    log.debug(logid+'Searching for curmatstar in '+str(starrec)+' with '+';'.join([curmatID.strip(),starrecID.strip(),resprecid.strip(),starrec.description]))
 
                     if not curmatstar:
                         log.error(logid+'Not possible to define curmatstar for '+str(matfile)+' and '+str(outdir+filename.strip()+"-mirstar.fa"))
                         #sys.exit(1)
 
-                    log.debug(["coor1temp",longseq,curmatseq])
+                    log.debug(["coor1temp",longseq,curmatseq,curmatstar])
                     #coortemp1=int(longseq.index(curmatseq))
                     #coortemp2=int(longseq.index(curmatstar))
                     #CAVH
@@ -3729,8 +3729,14 @@ def sublist(filename, args):
 
             for n in range(mk+1,int(len(listmatcoor)/7)+1):
                 with open(outdir+filename.strip()+"-Final.anc","a") as anchorcoorfile:
-                    anchorcoorfile.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+3])+" "+str(listmatcoor[mi+10+r])+" "+str(22)+" "+str(1)+"\n")
-                    anchorcoorfile.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+5])+" "+str(listmatcoor[mi+12+r])+" "+str(22)+" "+str(1)+"\n")
+                    if listmatcoor[mi+3] == -1 or listmatcoor[mi+10+r] == -1:
+                        continue
+                    else:
+                        anchorcoorfile.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+3]+1)+" "+str(listmatcoor[mi+10+r]+1)+" "+str(22)+" "+str(1)+"\n")
+                    if listmatcoor[mi+5] == -1 or listmatcoor[mi+12+r] == -1:
+                        continue
+                    else:
+                        anchorcoorfile.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+5]+1)+" "+str(listmatcoor[mi+12+r]+1)+" "+str(22)+" "+str(1)+"\n")
                 r=r+7
 
             mi=mi+7
@@ -3922,8 +3928,8 @@ def sublist(filename, args):
 
         else:
             if os.path.isfile(outdir+filename.strip()+'-Final.fa'):
-                f3=os.popen("rm "+outdir+filename.strip()+"-Final.fa")
-                f3.close()
+                #f3=os.popen("rm "+outdir+filename.strip()+"-Final.fa")
+                #f3.close()
                 NewShanon=CalShanon(outdir+filename.strip()+'.stk')
                 log.debug(["stk file studied is: "+outdir+filename.strip()+'.stk'])
                 log.debug(["final.fa exists",NewShanon])
