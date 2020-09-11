@@ -2086,7 +2086,7 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
             mirstar=precursor[mirstarspos:mirstarepos+1]
             mirstar= mirstar.replace("T","U")#here it is minus because we are in the 3p arm, the sposstar is actually the last nucleotide in the mir* which is the firt one folding to mir
             log.debug(["get mirstar here 20",mirstar,mirstarspos,orien])
-            if len(mirstar) <= 20: #CAVH 
+            if len(mirstar) <= 20: #CAVH
                 log.debug("no predicted mir*")
                 return "",-1,-1,'p'
             else:
@@ -3365,18 +3365,18 @@ def sublist(filename, args):
                     mtf = openfile(matfile)
                     first = None
                     second = None
-                    #Here use index because both matures were reported at the
-                    #Beginning
+                    #Here use find because both matures were reported at the
+                    #Beginning and we are iterating over the complete mature file
                     for record in SeqIO.parse(mtf, 'fasta'):
                         curmatseq=str(record.seq)
                         if firstmat.strip() in record.description:
-                            startmat=int(mat2seq.index(curmatseq))
+                            startmat=int(mat2seq.find(curmatseq))
                             endmat=(startmat+len(curmatseq))-1
                             first = 'Found'
                             log.debug(logid+str(["heres new",mat2seq,startmat,endmat,curmatseq]))
 
                         if lastmat.strip() in record.description:
-                            startmatstar = int(mat2seq.index(curmatseq))
+                            startmatstar = int(mat2seq.find(curmatseq))
                             endmatstar=(startmatstar+len(curmatseq))-1
                             second = 'Found'
                             log.debug(logid+str(["heres new",startmatstar,endmatstar,curmatseq]))
@@ -4463,7 +4463,7 @@ if __name__ == '__main__':
 
         for fam in lfams:
             log.info('Working on '+str(fam))
-            pool.apply_async(sublist, args=(fam, args))            
+            pool.apply_async(sublist, args=(fam, args))
         pool.close()
         pool.join()
 

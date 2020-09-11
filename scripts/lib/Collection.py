@@ -94,7 +94,7 @@ def dofold(listnewold,oldid,precseq,newid,newseq):
 def foldnomat(inputfasta,outputfasta):#fold the new and the old sequences, using temp file every time I get the new sequence from the original
     logid = scriptname+'.foldnomat: '
     try:
-        f=os.popen("RNAfold -d3 --noPS --noLP <"+inputfasta)
+        f=os.popen("RNAfold -d2 --noPS --noLP <"+inputfasta) #CAVH this parameter must be consistent with dofold function
         fi=f.read()
         wr=open(outputfasta,"w")
         f.close()
