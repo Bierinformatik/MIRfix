@@ -167,8 +167,10 @@ def getindex2mat(sequence, specie, precID, precdesc, listnogenomes, listnotingen
                         log.debug(["in genome",precID])
                         flagseq=1
                         gseq=str(i.seq)
-                        cutlongbefore=100
-                        cutlongafter=100
+                        #cutlongbefore=100
+                        #cutlongafter=100
+                        cutlongbefore=250 #Not 250?
+                        cutlongafter=250 #Not 250?
                         beforeseq=len(gseq[:precind])
                         afterseq=len(gseq[precind+len(sequence):])
 
@@ -3376,13 +3378,13 @@ def sublist(filename, args):
                     #Beginning and we are iterating over the complete mature file
                     for record in SeqIO.parse(mtf, 'fasta'):
                         curmatseq=str(record.seq)
-                        if firstmat.strip() in record.description:
+                        if firstmat.strip() == record.description.split(" ")[1]: #CAVH specific label
                             startmat=int(mat2seq.find(curmatseq))
                             endmat=(startmat+len(curmatseq))-1
                             first = 'Found'
                             log.debug(logid+str(["heres new",mat2seq,startmat,endmat,curmatseq]))
 
-                        if lastmat.strip() in record.description:
+                        if lastmat.strip() == record.description.split(" ")[1]: #CAVH specific label
                             startmatstar = int(mat2seq.find(curmatseq))
                             endmatstar=(startmatstar+len(curmatseq))-1
                             second = 'Found'
