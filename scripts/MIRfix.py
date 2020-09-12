@@ -187,8 +187,10 @@ def getindex2mat(sequence, specie, precID, precdesc, listnogenomes, listnotingen
                             flagseq=1
                             #gseq=str(i.seq)
                             gseq=str((i.seq).reverse_complement()) #minus strand
-                            cutlongbefore=100
-                            cutlongafter=100
+                            #cutlongbefore=100 
+                            #cutlongafter=100 
+                            cutlongbefore=250 #Not 250?
+                            cutlongafter=250 #Not 250?
                             beforeseq=len(gseq[:precind])
                             afterseq=len(gseq[precind+len(sequence):])
 
@@ -3091,7 +3093,7 @@ def sublist(filename, args):
         suma=[]
         sumall=[]
         nomats=0#in case no mat exists and no mats at all
-        userflanking=0
+        #userflanking=0 #redundant
         listnomatremoved=[]
         flagnomatexists=False
 
@@ -3279,18 +3281,23 @@ def sublist(filename, args):
                         log.debug(logid+'long2matseq: '+str(long2matseq))
 
                         if long2matseq!="":
-                            if xcut>=0 and xcut<=50:
-                                fspos=(mspos+100)-xcut
-                            elif xcut>50 or xcut<0:
-                                fspos=(mspos+100)-10
+                            #CAVH
+                            (fspos, fepos, cutpseq) = find_positions(long2matseq, pseq.replace("U", "T"),
+                                                                             fmatseq.replace("U", "T"), ematseq.replace("U", "T"),
+                                                                             userflanking)
 
-                            if ycut>=0 and ycut<=50:
-                                fepos=(mepos+100)+ycut
-                            elif ycut>50 or ycut<0:
-                                fepos=(mepos+100)+10
+                            #if xcut>=0 and xcut<=50:
+                            #    fspos=(mspos+100)-xcut
+                            #elif xcut>50 or xcut<0:
+                            #    fspos=(mspos+100)-10
 
-                            #cutpseq=long2matseq[fspos:fepos+1]
-                            cutpseq=long2matseq[fspos:fepos+len(ematseq)]
+                            #if ycut>=0 and ycut<=50:
+                            #    fepos=(mepos+100)+ycut
+                            #elif ycut>50 or ycut<0:
+                            #    fepos=(mepos+100)+10 #This is the start of mir*
+
+                            ##cutpseq=long2matseq[fspos:fepos+1]
+                            #cutpseq=long2matseq[fspos:fepos+len(ematseq)]
                             with open(outdir+filename+"-res.fa","a") as familyfileres:
                                 familyfileres.write(">"+str(record.description)+"\n"+str(cutpseq).replace('T','U')+"\n")
                             with open(outdir+filename.strip()+"-Final.fasta","a") as familyfileresfinal:
@@ -3380,10 +3387,13 @@ def sublist(filename, args):
                             endmatstar=(startmatstar+len(curmatseq))-1
                             second = 'Found'
                             log.debug(logid+str(["heres new",startmatstar,endmatstar,curmatseq]))
-
-                        if first and second:
-                            coorflag=1
-                            break
+                    #CAVH: Because was find(), check that startmat, endmat, startmatstar, endmatstar have values != -1
+                    if startmat == -1 or endmat == -1 or startmatstar == -1 or endmatstar == -1:
+                        log.error(logid+'Not possible to locate the mapping referred mir or mir* on the mature file for '+resprecid+' with '+mat2seq)
+                        sys.exit()
+                    if first and second:
+                        coorflag=1
+                        #break
 
                     if coorflag==1:
                         list2matcoor.append(firstmat.strip())
