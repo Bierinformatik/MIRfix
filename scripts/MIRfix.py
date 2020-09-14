@@ -3441,8 +3441,14 @@ def sublist(filename, args):
                             star=True
                             break
 
-                    coortemp1=int(mat1seq.index(curmatseq))
-                    coortemp2=int(mat1seq.index(curmatstar))
+                    #coortemp1=int(mat1seq.index(curmatseq))
+                    #coortemp2=int(mat1seq.index(curmatstar))
+                    # Here genome did not exists, then it is reeplaced by the same precursor seq to obtain 
+                    # the mature coordinates
+                    (coortemp1, coortemp2, finalseq) = find_positions(mat1seq, mat1seq,
+                                                 curmatseq, curmatstar,
+                                                 userflanking)
+
 
                     #if coortemp1 == -1 or coortemp2 == -1:
                     #    log.error(logid+'Not possible to locate miR or miR* in '+curmatID+' with '+mat1seq+" and "+curmatseq+ " and "+ curmatstar)
@@ -3455,35 +3461,37 @@ def sublist(filename, args):
                         curmatstar=tempseqex[:]
 
                     log.debug(logid+str(["no long",coortemp1,coortemp2,curmatseq,curmatstar]))
-
-                    startmattemp=int(mat1seq.find(curmatseq))
-
-                    if startmattemp<=userflanking:
-                        startmat=startmattemp
-                        startfinalseq=0
-                    elif startmattemp>userflanking:
-                        startmat=userflanking
-                        startfinalseq=startmattemp-(startmat-userflanking)
-
+                    startmat=coortemp1
                     endmat=(startmat+len(curmatseq))-1
-                    tempseq=mat1seq[startfinalseq:]
-                    tempnomirseq=mat1seq[endmat:] #CAVH fragment without detected mir
-                    updateindexnomirregion = int(tempseq.find(tempnomirseq)) #CAVH start of no mir region on tempseq context
-                    log.debug(logid+str(["curmat not",mat1seq,curmatseq]))
-                    log.debug(logid+str(['coor not',startmat,endmat]))
+                    #startmattemp=int(mat1seq.find(curmatseq))
+
+                    #if startmattemp<=userflanking:
+                    #    startmat=startmattemp
+                    #    startfinalseq=0
+                    #elif startmattemp>userflanking:
+                    #    startmat=userflanking
+                    #    startfinalseq=startmattemp-(startmat-userflanking)
+
+                    #endmat=(startmat+len(curmatseq))-1
+                    #tempseq=mat1seq[startfinalseq:]
+                    #tempnomirseq=mat1seq[endmat:] #CAVH fragment without detected mir
+                    #updateindexnomirregion = int(tempseq.find(tempnomirseq)) #CAVH start of no mir region on tempseq context
+                    #log.debug(logid+str(["curmat not",mat1seq,curmatseq]))
+                    #log.debug(logid+str(['coor not',startmat,endmat]))
 
                     if star:
-                        #startmatstar=int(tempseq.find(curmatstar))
-                        startmatstar=int(tempnomirseq.find(curmatstar)) #CAVH search on region without mir
+                        startmatstar=coortemp2                        
+                        endmatstar=startmatstar+int(len(curmatstar)-1)
+                        #startmatstar=int(tempnomirseq.find(curmatstar)) #CAVH search on region without mir
                         #endmatstar=startmatstar+int(len(curmatstar)-1)
-                        endmatstar = startmatstar+int(len(curmatstar)-1) + updateindexnomirregion #CAVH
-                        numberendflank=int(len(tempseq)-endmatstar-1)
+                        #endmatstar = startmatstar+int(len(curmatstar)-1) + updateindexnomirregion #CAVH
+                        #numberendflank=int(len(tempseq)-endmatstar-1)
 
-                        if numberendflank<=userflanking:
-                            finalseq=tempseq[0:]
-                        elif numberendflank>userflanking:
-                            endfinalseq=endmatstar+userflanking
-                            finalseq=tempseq[0:endfinalseq+1]
+                        #if numberendflank<=userflanking:
+                        #    finalseq=tempseq[0:]
+                        #elif numberendflank>userflanking:
+                        #    endfinalseq=endmatstar+userflanking
+                        #    finalseq=tempseq[0:endfinalseq+1]
 
                         log.debug(logid+str(['coor star not',startmatstar,endmatstar,finalseq]))#,startmatstarlong,endmatstarlong)
 
@@ -3594,7 +3602,8 @@ def sublist(filename, args):
                             curmatsplit=(starrec.description).split()
                             curmatsplit1=(curmatsplit[1]).split('-')
                             starrecID=curmatsplit1[0]
-                            if (curmatID).strip()==(starrecID).strip() or (curmatID).strip()+'/' in (starrecID).strip() and (resprecid.strip() in starrec.description):
+                            #if (curmatID).strip()==(starrecID).strip(): #or (curmatID).strip()+'/' in (starrecID).strip() and (resprecid.strip() in starrec.description):
+                            if (curmatID).strip()==(starrecID).strip(): #CAVH
                                 curmatstar=str(starrec.seq)
                                 star=True
                                 break
@@ -3605,7 +3614,7 @@ def sublist(filename, args):
                         log.error(logid+'Not possible to define curmatstar for '+str(matfile)+' and '+str(outdir+filename.strip()+"-mirstar.fa"))
                         #sys.exit(1)
 
-                    log.debug(["coor1temp",longseq,curmatseq,curmatstar])
+                    log.debug(["coor1temp",longseq,curmatseq,curmatstar,resprecid])
                     #coortemp1=int(longseq.index(curmatseq))
                     #coortemp2=int(longseq.index(curmatstar))
                     #CAVH

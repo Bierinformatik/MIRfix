@@ -94,7 +94,7 @@ def dofold(listnewold,oldid,precseq,newid,newseq):
 def foldnomat(inputfasta,outputfasta):#fold the new and the old sequences, using temp file every time I get the new sequence from the original
     logid = scriptname+'.foldnomat: '
     try:
-        f=os.popen("RNAfold -d2 --noPS --noLP <"+inputfasta) #CAVH this parameter must be consistent with dofold function
+        f=os.popen("RNAfold -d2 --noPS --noLP <"+inputfasta) #CAVH based on dofold function must be equal the parameters.
         fi=f.read()
         wr=open(outputfasta,"w")
         f.close()
@@ -494,6 +494,26 @@ def detect_pairs(complete_array, longseq, mat1seq, curmatseq, curmatstar):
                         number_pair = number_pair + 1
     return (pair, number_pair)
 
+def check_borders (value,limitlen,mode):
+    if mode == "start":
+        if value < limitlen:
+            returnvalue = limitlen
+            return returnvalue
+        else:
+            returnvalue = value
+            return returnvalue
+    elif mode == "end":
+        if value > limitlen:
+            returnvalue = limitlen
+            return returnvalue
+        else:
+            returnvalue = value
+            return returnvalue
+    else:
+        print("Value not accepted")
+        return None
+                
+
 def define_best_pair(pairs, distances_loop, startprecursor,
                      endprecursor, precursorlen, flanking, longseq):
     all_distances_sorted = sorted(distances_loop, key=itemgetter(-1))
@@ -507,6 +527,8 @@ def define_best_pair(pairs, distances_loop, startprecursor,
             finalcoord2T = all_distances_sorted[i][1][1][1]
             startfinalseq = coord1T-flanking
             endfinalseq = finalcoord2T+flanking
+            startfinalseq = check_borders(startfinalseq, 0, "start")
+            endfinalseq = check_borders(endfinalseq, len(longseq), "end")
             correctfinalseq = longseq[startfinalseq:endfinalseq+1]
             # Assign coord1 for mir and coord2 for mirstar
             class1=all_distances_sorted[i][1][0][-1]
