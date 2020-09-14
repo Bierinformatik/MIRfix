@@ -2,9 +2,13 @@ import logging
 import multiprocessing
 import os, sys, inspect
 import traceback as tb
+import datetime
+import shutil
+#from MIRfix import scriptname
 
-log = multiprocessing.get_logger()  # does not take name argument
-log.addHandler(logging.StreamHandler(sys.stderr))
+
+scriptname = 'MIRfix'
+
 
 def makelogdir(logdir):
     if not os.path.isabs(logdir):
@@ -74,6 +78,24 @@ def backup(file):
         os.makedirs(logdir)
         open(os.path.abspath(file),'a').close()
 
+# SETUP log
+logtime = str(datetime.datetime.now().strftime("%Y%m%d_%H_%M_%S_%f"))
+logdir = 'LOGS' # +os.sep+logtime
+makelogdir(logdir)
+logfile = os.path.abspath(logdir)+os.sep+scriptname+'_'+logtime+'.log'
+log = multiprocessing.get_logger()  # does not take name argument
+
+if scriptname:
+    if not os.path.isfile(os.path.abspath(logfile)):
+        open(logfile,'a').close()
+    else:
+        ts = str(datetime.datetime.fromtimestamp(os.path.getmtime(os.path.abspath(logfile))).strftime("%Y%m%d_%H_%M_%S"))
+        shutil.move(logfile,logdir+os.sep+scriptname+'_'+ts+'.log')
+
+    setup_multiprocess_logger(log_file='stderr', logformat='%(asctime)s %(levelname)-8s %(name)-12s %(message)s', datefmt='%m-%d %H:%M')
+    setup_multiprocess_logger(log_file=logfile, filemode='a', logformat='%(asctime)s %(levelname)-8s %(name)-12s %(message)s', datefmt='%m-%d %H:%M')
+
+
 if __name__ == '__main__':
     try:
         # set up logging to file
@@ -95,7 +117,7 @@ if __name__ == '__main__':
         # application, e.g.:
         #log = logging.getLogger('logger.main')
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,

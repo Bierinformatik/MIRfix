@@ -1,38 +1,32 @@
 #!/usr/bin/env python3
 
-##import modules
+# import modules
 import os
 import argparse
-#import operator
-import math
 import sys
 import re
-import inspect
 import shlex
-import time
 import multiprocessing
 from multiprocessing import set_start_method
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
 import json
-import gzip
 import traceback as tb
 from distutils.spawn import find_executable
-##import Bio modules
+# import Bio modules
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio import AlignIO
 from Bio.Align.Applications import ClustalwCommandline
 
-#Logging
-import datetime
-from lib.logger import makelogdir, setup_multiprocess_logger, checklog
+matplotlib.use('Agg')
 
-scriptname = os.path.basename(__file__).replace('.py','')
-##load own modules
+#scriptname = os.path.basename(__file__).replace('.py','')
+
+#Logging
+from lib.logger import makelogdir, setup_multiprocess_logger, checklog, log, scriptname
+# load own modules
 from lib.Collection import *
 
 def getindex(sequence, specie, precID, precdesc, listnogenomes, listnotingenome, templong, args):#get the index of the original sequence in its genome
@@ -123,7 +117,7 @@ def getindex(sequence, specie, precID, precdesc, listnogenomes, listnotingenome,
             returnlst=[]
             return returnlst,listnogenomes,listnotingenome,templong,minusstrand
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -189,8 +183,8 @@ def getindex2mat(sequence, specie, precID, precdesc, listnogenomes, listnotingen
                             flagseq=1
                             #gseq=str(i.seq)
                             gseq=str((i.seq).reverse_complement()) #minus strand
-                            #cutlongbefore=100 
-                            #cutlongafter=100 
+                            #cutlongbefore=100
+                            #cutlongafter=100
                             cutlongbefore=250 #Not 250?
                             cutlongafter=250 #Not 250?
                             beforeseq=len(gseq[:precind])
@@ -210,7 +204,7 @@ def getindex2mat(sequence, specie, precID, precdesc, listnogenomes, listnotingen
             listnotingenome.append(precID)
             return "",listnogenomes,listnotingenome
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -353,7 +347,7 @@ def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop
 
         return listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listnogenomes,listnotingenome,templong,listgoodnew
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -2021,7 +2015,7 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
 
         return oldlstlstr,oldlstlstl,oldparts,finaloldcomp,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listgoodnew
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -2154,7 +2148,7 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
             log.debug("no predicted mir*")
             return "",-1,-1,'p'
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -2292,7 +2286,7 @@ def getmirstarbak(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
             log.debug("no predicted mir*")
             return "",-1,-1,'p'
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -2394,7 +2388,7 @@ def predict(align,matId,newmatID,matfile,filename,precdescrip,mapfile,directory,
                         listremovedbroken.append(famsplit[1].strip())
         return listremovedbroken,listremovedscore
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -2521,7 +2515,7 @@ def checknomat(precfile,mapfile,matfile,directory,precfilename,listremovedbroken
             flagnomatexists=False
             log.debug("all precursors has mature, at least one")
         return flagnomatexists,nomats,listremovedbroken,listremovedscore,listnomat
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -2847,7 +2841,7 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
 
         return finalpredictedspos,(finalpredictedepos+1)
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -3010,7 +3004,7 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
 
         return int(countcorrected),int(countcorrectedTonew),listmisalignedcorr,listcorrected,listcorrectedori
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -4404,9 +4398,9 @@ def sublist(filename, args):
         log.debug([listofold,listofnew,listofnewloop,listofoldloop,listremovedbroken,listremovedscore,listofmirstar])
         log.debug(list2mat)
         if os.path.isfile(outdir+filename.strip()+"-res.fa"):
-            fr1=os.popen("rm "+outdir+filename.strip()+"-res.fa")
+            os.popen("rm "+outdir+filename.strip()+"-res.fa")
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -4440,22 +4434,9 @@ if __name__ == '__main__':
     try:
         set_start_method("spawn")  # set multiprocessing start method to safe spawn
         args=parseargs()
-        logtime = str(datetime.datetime.now().strftime("%Y%m%d_%H_%M_%S_%f"))
-        logdir = 'LOGS'+os.sep+logtime
-        makelogdir(logdir)
-        logfile = os.path.abspath(logdir)+os.sep+scriptname+'.log'
 
-        #find_executable('clustalw2') or sys.exit('Please install clustalw2 to run this')
+        # find_executable('clustalw2') or sys.exit('Please install clustalw2 to run this')
         find_executable('dialign2-2') or sys.exit('Please install dialign2-2 to run this')
-
-        if not os.path.isfile(os.path.abspath(logfile)):
-            open(logfile,'a').close()
-        else:
-            ts = str(datetime.datetime.fromtimestamp(os.path.getmtime(os.path.abspath(logfile))).strftime("%Y%m%d_%H_%M_%S"))
-            shutil.move(logfile,logdir+os.sep+scriptname+'_'+ts+'.log')
-
-        log = setup_multiprocess_logger(log_file='stderr', logformat='%(asctime)s %(levelname)-8s %(name)-12s %(message)s', datefmt='%m-%d %H:%M')
-        log = setup_multiprocess_logger(log_file=logfile, filemode='a', logformat='%(asctime)s %(levelname)-8s %(name)-12s %(message)s', datefmt='%m-%d %H:%M')
 
         log.setLevel(args.loglevel)
         log.info(logid+'Running '+scriptname+' on '+str(args.cores)+' cores.')
@@ -4469,8 +4450,6 @@ if __name__ == '__main__':
                 lfams.append(line.strip())
         log.debug(logid+'Families to process: '+str(lfams))
 
-        outd=args.outdir
-
         pool = multiprocessing.Pool(processes=nthreads, maxtasksperchild=1)
 
         for fam in lfams:
@@ -4479,7 +4458,7 @@ if __name__ == '__main__':
         pool.close()
         pool.join()
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
