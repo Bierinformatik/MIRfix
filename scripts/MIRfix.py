@@ -6,6 +6,7 @@ import argparse
 import sys
 import re
 import shlex
+import datetime
 import multiprocessing
 from multiprocessing import set_start_method
 import numpy as np
@@ -19,15 +20,15 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio import AlignIO
 from Bio.Align.Applications import ClustalwCommandline
-
-matplotlib.use('Agg')
-
-#scriptname = os.path.basename(__file__).replace('.py','')
-
-#Logging
-from lib.logger import makelogdir, setup_multiprocess_logger, checklog, log, scriptname
+# Logging
+from lib.logger import logger
 # load own modules
 from lib.Collection import *
+
+
+matplotlib.use('Agg')
+scriptname = os.path.basename(__file__).replace('.py', '')
+
 
 def getindex(sequence, specie, precID, precdesc, listnogenomes, listnotingenome, templong, args):#get the index of the original sequence in its genome
     logid = scriptname+'.getindex: '
@@ -3011,8 +3012,10 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
         )
         log.error(logid+''.join(tbe.format()))
 
-def sublist(filename, args):
+def sublist(filename, logging, args):
     logid = scriptname+'.sublist: '
+    log = logging.logger
+    print('SUB: '+str(log)+' '+str(logging))
     log.debug(logid+'Starting to process '+str(filename))
     try:
         filesdir=str(args.famdir)#dir for families
@@ -4418,6 +4421,7 @@ def parseargs():
     parser.add_argument("-d", "--maturedir", type=str, default='', help='Directory of matures')
     parser.add_argument("-o", "--outdir", type=str, default='', help='Directory for output')
     parser.add_argument("-e", "--extension", type=int, default=10, help='Extension of nucleotides for precursor cutting')
+    parser.add_argument("-l", "--logdir", type=str, default='LOGS', help='Directory to write logfiles to')
     parser.add_argument("--loglevel", type=str, default='WARNING', choices=['WARNING','ERROR','INFO','DEBUG'], help="Set log level")
 
     if len(sys.argv)==1:
@@ -4433,28 +4437,32 @@ if __name__ == '__main__':
     logid = scriptname+'.main: '
     try:
         set_start_method("spawn")  # set multiprocessing start method to safe spawn
-        args=parseargs()
+        args = parseargs()
 
         # find_executable('clustalw2') or sys.exit('Please install clustalw2 to run this')
         find_executable('dialign2-2') or sys.exit('Please install dialign2-2 to run this')
 
-        log.setLevel(args.loglevel)
-        log.info(logid+'Running '+scriptname+' on '+str(args.cores)+' cores.')
-        log.info(logid+'CLI: '+sys.argv[0]+' '+'{}'.format(' '.join( [shlex.quote(s) for s in sys.argv[1:]] )))
-
-        nthreads=args.cores or 2
+        nthreads = args.cores or 2
         lfams = []
 
         with openfile(args.families) as filelist:
             for line in filelist:
                 lfams.append(line.strip())
-        log.debug(logid+'Families to process: '+str(lfams))
 
         pool = multiprocessing.Pool(processes=nthreads, maxtasksperchild=1)
+        logdir = args.logdir
 
         for fam in lfams:
+            logfile = str.join(os.sep,[os.path.abspath(logdir),scriptname+'_'+str(fam)+'.log'])
+            log = logger('', logdir, logfile, args.loglevel)
+            log._setup_logger()
+            log._makelogdir()
+            log._makelogfile()
+            log.info(logid+'Running '+scriptname+' on '+str(args.cores)+' cores.')
+            log.info(logid+'CLI: '+sys.argv[0]+' '+'{}'.format(' '.join( [shlex.quote(s) for s in sys.argv[1:]] )))
             log.info('Working on '+str(fam))
-            pool.apply_async(sublist, args=(fam, args))
+            print('MAIN: '+str(log))
+            pool.apply_async(sublist, args=(fam, log, args))
         pool.close()
         pool.join()
 

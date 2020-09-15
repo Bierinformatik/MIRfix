@@ -1,7 +1,5 @@
 import os
 import sys
-import inspect
-from lib.logger import log, scriptname
 # other modules
 import numpy as np
 import heapq
@@ -15,12 +13,18 @@ from io import StringIO
 from Bio import AlignIO
 # import ViennaRNA
 import RNA
+import lib.logger
 
 
-print("COLLECTION: "+str(scriptname)+str(log)+str(log.handlers))
+scriptname = __name__
+log = lib.logger.logger('')
+print("COLLECTION: "+str(scriptname)+str(log)+str(log.logfile_handlers))
+
+
 ############################################################
 ######################## Functions #########################
 ############################################################
+
 
 #Files
 def openfile(f):
