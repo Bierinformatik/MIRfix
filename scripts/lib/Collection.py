@@ -414,85 +414,123 @@ def detect_overlapp_in_array(complete_array):
 
 
 def detect_pairs(complete_array, longseq, mat1seq, curmatseq, curmatstar):
+    # Remove the first element to create complete_array_one
+    complete_array_one = complete_array[1:]
     columns = len(complete_array)  # Complete number columns
+    columns_one = len(complete_array_one)
+    pair = defaultdict(dict)
+    #Here consider start in 0 with complete_array
+    #
     # Detect overlapping
     overlapping = detect_overlapp_in_array(complete_array)
-    pair = defaultdict(dict)
+    pair0 = defaultdict(dict)
+    pair1 = defaultdict(dict)
     number_pair = 0
     if overlapping == 0:
         for i in range(0, columns-1):  # In array =columns -1,range not reach end#
             if complete_array[i][-1] != complete_array[i+1][-1]:
-                pair[number_pair] = [complete_array[i], complete_array[i+1]]
+                pair0[number_pair] = [complete_array[i], complete_array[i+1]]
                 number_pair = number_pair + 1
     else:  # At least one pair overlapped with another one
-        substring = None
-        update_index = None
-        for j in range(0, columns -1):  # (0, n-1)
-            if j == 0:  # Search on the complete sequence
-                identity_first = complete_array[j][-1]  # M or S
-                if identity_first == "M":
-                    start_m = longseq.find(curmatseq)  # Start M
-                    end_m = (start_m + len(curmatseq)) - 1  # End M
-                    substring = longseq[end_m + 1:]  # Restrict seq no M
-                    start_temp_s = substring.find(curmatstar)  # Detect start S
-                    update_index = longseq.find(substring)  # Get index
-                    start_s = start_temp_s + update_index  # Update index S
-                    end_s = (start_s + len(curmatstar)) -1
-                    element1 = [start_m, end_m, "M"]
-                    element2 = [start_s, end_s, "S"]
-                    pair[number_pair] = [element1, element2]
+        #substring = None
+        #update_index = None
+        (pair0, number_pair) = iterate_over_pairs(complete_array, columns, curmatseq, curmatstar, longseq, number_pair)
+    
+    #Here consider start in 0 with complete_array_one
+    # Detect overlapping
+    if columns_one > 1:
+        overlapping1 = detect_overlapp_in_array(complete_array_one)
+        if overlapping1 == 0:
+            for i in range(0, columns-1):  # In array =columns -1,range not reach end#
+                if complete_array[i][-1] != complete_array[i+1][-1]:
+                    pair1[number_pair] = [complete_array[i], complete_array[i+1]]
                     number_pair = number_pair + 1
-                else:  # When S is first, search M
-                    start_s = longseq.find(curmatstar)  # Start S
-                    end_s = (start_s + len(curmatstar))-1  # End S
-                    substring = longseq[end_s + 1:]  # Restrict seq no S
-                    update_index = longseq.find(substring)
-                    start_temp_m = substring.find(curmatseq)  # Search M
-                    start_m = start_temp_m + update_index  # Start M
-                    end_m = (start_m + len(curmatseq)) - 1  # End M
-                    element1 = [start_s, end_s, "S"]
-                    element2 = [start_m, end_m, "M"]
-                    pair[number_pair] = [element1, element2]
-                    number_pair = number_pair + 1
-            else:  # This is not the first element
-                if complete_array[j][0] in range(complete_array[j-1][0],
-                                                 complete_array[j-1][1]):
-                    continue
-                else:
-                    identity_first = complete_array[j][-1]  # M or S
-                    if identity_first == "M":
-                        start_temp_m = substring.find(curmatseq)  # Start M in sub
-                        end_temp_m = (start_temp_m + len(curmatseq)) - 1
-                        start_m = start_temp_m + update_index  # Updated M Start
-                        end_m = (start_m + len(curmatseq)) - 1  # Updated M end
-                        substring = substring[end_temp_m + 1:]   # String no start M
-                        update_index = longseq.find(substring)
-                        start_temp_s = substring.find(curmatstar)
-                        if (start_temp_s == -1):  # Not possible to map S
-                            continue
-                        start_s = start_temp_s + update_index  # Updated start S
-                        end_s = (start_s + len(curmatstar)) -1  # Updated end S
-                        element1 = [start_m, end_m, "M"]
-                        element2 = [start_s, end_s, "S"]
-                        pair[number_pair] = [element1, element2]
-                        number_pair = number_pair + 1
-                    else:  # When S is first, search M
-                        start_temp_s = substring.find(curmatstar)  # Start M in sub
-                        end_temp_s = (start_temp_s + len(curmatstar)) - 1
-                        start_s = start_temp_s + update_index  # Updated S Start
-                        end_s = (start_s + len(curmatstar)) - 1  # Updated S end
-                        substring = substring[end_temp_s + 1:]   # String no start S
-                        update_index = longseq.find(substring)
-                        start_temp_m = substring.find(curmatseq)
-                        start_m = start_temp_m + update_index  # Update start M
-                        if (start_temp_m == -1):  # Not possible to map M
-                            continue
-                        end_m = (start_s + len(curmatseq)) -1  # Updated end M
-                        element1 = [start_s, end_s, "S"]
-                        element2 = [start_m, end_m, "M"]
-                        pair[number_pair] = [element1, element2]
-                        number_pair = number_pair + 1
+        else:  # At least one pair overlapped with another one
+            (pair1, number_pair) = iterate_over_pairs(complete_array_one, columns_one, curmatseq, curmatstar, longseq, number_pair)
+    #Merge groups based0 based1
+    pair = Merge(pair0, pair1)
     return (pair, number_pair)
+
+def Merge(dict1, dict2): 
+    merging = {**dict1, **dict2} 
+    return merging
+    
+def iterate_over_pairs(complete_array, columns, curmatseq, curmatstar, longseq, number_pair):
+    #type = start0 and start1
+    # [M,S,S,M,S]
+    # start0: Count from 0 element -> [0:[M,S], 1:[M,S]]
+    # start1: Count from 1 element -> [0:[M,S]]
+    substring = None
+    update_index = None
+    pair = defaultdict(dict)
+    for j in range(0, columns -1):  # (0, n-1)
+        if j == 0:  # Search on the complete sequence
+            identity_first = complete_array[j][-1]  # M or S
+            if identity_first == "M":
+                start_m = longseq.find(curmatseq)  # Start M
+                end_m = (start_m + len(curmatseq)) - 1  # End M
+                substring = longseq[end_m + 1:]  # Restrict seq no M
+                start_temp_s = substring.find(curmatstar)  # Detect start S
+                update_index = longseq.find(substring)  # Get index
+                start_s = start_temp_s + update_index  # Update index S
+                end_s = (start_s + len(curmatstar)) -1
+                element1 = [start_m, end_m, "M"]
+                element2 = [start_s, end_s, "S"]
+                pair[number_pair] = [element1, element2]
+                number_pair = number_pair + 1
+            else:  # When S is first, search M
+                start_s = longseq.find(curmatstar)  # Start S
+                end_s = (start_s + len(curmatstar))-1  # End S
+                substring = longseq[end_s + 1:]  # Restrict seq no S
+                update_index = longseq.find(substring)
+                start_temp_m = substring.find(curmatseq)  # Search M
+                start_m = start_temp_m + update_index  # Start M
+                end_m = (start_m + len(curmatseq)) - 1  # End M
+                element1 = [start_s, end_s, "S"]
+                element2 = [start_m, end_m, "M"]
+                pair[number_pair] = [element1, element2]
+                number_pair = number_pair + 1
+        else:  # This is not the first element
+            if complete_array[j][0] in range(complete_array[j-1][0], # Avoid the overlapping element
+                complete_array[j-1][1]):
+                identity_first = complete_array[j+1][-1]
+            else:
+                identity_first = complete_array[j][-1]  # M or S
+            
+            if identity_first == "M":
+                start_temp_m = substring.find(curmatseq)  # Start M in sub
+                end_temp_m = (start_temp_m + len(curmatseq)) - 1
+                start_m = start_temp_m + update_index  # Updated M Start
+                end_m = (start_m + len(curmatseq)) - 1  # Updated M end
+                substring = substring[end_temp_m + 1:]   # String no start M
+                update_index = longseq.find(substring)
+                start_temp_s = substring.find(curmatstar)
+                if (start_temp_s == -1):  # Not possible to map S
+                    continue
+                start_s = start_temp_s + update_index  # Updated start S
+                end_s = (start_s + len(curmatstar)) -1  # Updated end S
+                element1 = [start_m, end_m, "M"]
+                element2 = [start_s, end_s, "S"]
+                pair[number_pair] = [element1, element2]
+                number_pair = number_pair + 1
+            else:  # When S is first, search M
+                start_temp_s = substring.find(curmatstar)  # Start M in sub
+                end_temp_s = (start_temp_s + len(curmatstar)) - 1
+                start_s = start_temp_s + update_index  # Updated S Start
+                end_s = (start_s + len(curmatstar)) - 1  # Updated S end
+                substring = substring[end_temp_s + 1:]   # String no start S
+                update_index = longseq.find(substring)
+                start_temp_m = substring.find(curmatseq)
+                start_m = start_temp_m + update_index  # Update start M
+                if (start_temp_m == -1):  # Not possible to map M
+                    continue
+                end_m = (start_m + len(curmatseq)) -1  # Updated end M
+                element1 = [start_s, end_s, "S"]
+                element2 = [start_m, end_m, "M"]
+                pair[number_pair] = [element1, element2]
+                number_pair = number_pair + 1
+    return (pair, number_pair)
+
 
 def check_borders (value,limitlen,mode):
     if mode == "start":

@@ -3374,21 +3374,29 @@ def sublist(filename, args):
                     mtf = openfile(matfile)
                     first = None
                     second = None
+                    curmatseq = None
+                    curmatstar = None
                     #Here use find because both matures were reported at the
                     #Beginning and we are iterating over the complete mature file
                     for record in SeqIO.parse(mtf, 'fasta'):
-                        curmatseq=str(record.seq)
+                        sequence=str(record.seq)
                         if firstmat.strip() == record.description.split(" ")[1]: #CAVH specific label
-                            startmat=int(mat2seq.find(curmatseq))
-                            endmat=(startmat+len(curmatseq))-1
+                            #startmat=int(mat2seq.find(curmatseq))
+                            #endmat=(startmat+len(curmatseq))-1
                             first = 'Found'
-                            log.debug(logid+str(["heres new",mat2seq,startmat,endmat,curmatseq]))
+                            curmatseq = sequence
+                            #log.debug(logid+str(["heres new mir",mat2seq,startmat,endmat,curmatseq]))
 
                         if lastmat.strip() == record.description.split(" ")[1]: #CAVH specific label
-                            startmatstar = int(mat2seq.find(curmatseq))
-                            endmatstar=(startmatstar+len(curmatseq))-1
+                            #startmatstar = int(mat2seq.find(curmatseq))
+                            #endmatstar=(startmatstar+len(curmatseq))-1
                             second = 'Found'
-                            log.debug(logid+str(["heres new",startmatstar,endmatstar,curmatseq]))
+                            curmatstar = sequence
+                            #log.debug(logid+str(["heres new mir*",mat2seq,startmatstar,endmatstar,curmatseq]))
+                    (startmat, startmatstar, finalseq) = find_positions(mat1seq, mat1seq,curmatseq, curmatstar,userflanking)
+                    endmat = startmat+len(curmatseq)-1
+                    endmatstar = (startmatstar+len(curmatstar))-1
+                    log.debug(logid+str(["heres new",mat2seq,finalseq,startmat,endmat,startmatstar,endmatstar,curmatseq,curmatstar]))
                     #CAVH: Because was find(), check that startmat, endmat, startmatstar, endmatstar have values != -1
                     if startmat == -1 or endmat == -1 or startmatstar == -1 or endmatstar == -1:
                         log.error(logid+'Not possible to locate the mapping referred mir or mir* on the mature file for '+resprecid+' with '+mat2seq)
