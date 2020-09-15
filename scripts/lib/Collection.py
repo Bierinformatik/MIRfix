@@ -579,8 +579,11 @@ def define_best_pair(pairs, distances_loop, startprecursor,
                 coor1=coord1T
                 coor2=coord2T
             break
-    return (coor1, coor2, correctfinalseq)
-
+        try:
+            return (coor1, coor2, correctfinalseq)
+        except Exception as err:
+            log.error("ERROR: mir or mir* did not fit into the precursor limits", [all_distances_sorted[i]], startprecursor, endprecursor)
+            sys.exit()
 
 def find_positions(longseq, mat1seq, curmatseq, curmatstar, flanking):
     # Features sequences
