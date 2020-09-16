@@ -24,7 +24,7 @@ from lib.logger import makelogdir, makelogfile, listener_process, listener_confi
 # load own modules
 from lib.Collection import *
 
-#log = logging.getLogger('MIRfix')
+
 log = logging.getLogger(__name__)  # use module name
 # matplotlib.use('Agg')
 scriptname = os.path.basename(__file__).replace('.py', '')
@@ -4466,10 +4466,8 @@ def main(args):
             pool.apply_async(sublist, args=(queue, worker_configurer, args.loglevel, fam, args))
         pool.close()
         pool.join()
-
         queue.put_nowait(None)
         listener.join()
-
 
     except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()

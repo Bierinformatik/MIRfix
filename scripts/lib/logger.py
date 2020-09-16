@@ -29,9 +29,9 @@ def listener_configurer(logfile, loglevel):
     root = logging.getLogger()
     file_handler = logging.FileHandler(logfile, 'a')
     console_handler = logging.StreamHandler()
-    #formatter = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
-    formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
+    formatter = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
     file_handler.setFormatter(formatter)
+    formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
     console_handler.setFormatter(formatter)
     root.addHandler(file_handler)
     root.addHandler(console_handler)
@@ -45,11 +45,11 @@ def listener_process(queue, configurer, logfile, loglevel):
     try:
         configurer(logfile, loglevel)
         while True:
-            while not queue.empty():
                 record = queue.get()
+                if record is None:  # We send this as a sentinel to tell the listener to quit.
+                    break
                 logger = logging.getLogger(record.name)
-                logger.handle(record)
-            sleep(1)
+                logger.handle(record)  # No level or filter logic applied - just do it!
     except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
