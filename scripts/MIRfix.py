@@ -3274,15 +3274,17 @@ def sublist(filename, args):
 #                        mepos=pseq.find(str(Seq(ematseq).reverse_complement()))
                     # Now we have found start and end position on plus and minus strands
                     
-                    # On miRBase some mature were assigned for the same miRNAs.
-                    if mspos == -1 or mepos == -1:
-                        log.error(logid+'Referred mir or mir* from '+pid+' did not fit into the precursor, maybe some reference is repeated on mapping file?')
-                        sys.exit()
+                    
                     
                     xcutseq=len(pseq[:mspos])#used in case the seq not found in the genome
                     ycutseq=len(pseq[mepos+1:])
 
                     if precID==pid:
+                        # On miRBase some mature were assigned for the same miRNAs.
+                        if mspos == -1 or mepos == -1:
+                            log.error(logid+'Referred mir or mir* from '+pid+' did not fit into the precursor, maybe some reference is repeated on mapping file?') 
+                            sys.exit()
+                            
                         long2matseq=""
                         long2matseq, listnogenomes, listnotingenome=getindex2mat(pseq.replace("U", "T"), specie, precID, precDes, listnogenomes, listnotingenome, args)  # from here on we have the reverse complement if seq on minus strand
                         log.debug(logid+'long2matseq: '+str(long2matseq))
