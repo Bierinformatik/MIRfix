@@ -1,44 +1,36 @@
-import os, sys, inspect
-from lib.logger import *
-##other modules
+import os
+import sys
+import logging
 import numpy as np
 import heapq
 from operator import itemgetter
-from natsort import natsorted, ns
 import traceback as tb
-import re
-import pprint
 import gzip
 import math
 from collections import defaultdict
 from io import StringIO
-##import Bio modules
-from Bio import SeqIO
-from Bio.Seq import Seq
+# import Bio modules
 from Bio import AlignIO
-from Bio.Align.Applications import ClustalwCommandline
-##import ViennaRNA
+# import ViennaRNA
 import RNA
 
-try:
-    scriptname = os.path.basename(inspect.stack()[-1].filename).replace('.py','')
-except Exception as err:
-    exc_type, exc_value, exc_tb = sys.exc_info()
-    tbe = tb.TracebackException(
-        exc_type, exc_value, exc_tb,
-    )
-    print(''.join(tbe.format()),file=sys.stderr)
+
+log = logging.getLogger(__name__)  # use module name
+scriptname = 'MIRfix.Collection'
+log.debug('LOGGING IN COLLECTION'+str(scriptname)+str(log)+str(log.handlers))
+
 
 ############################################################
 ######################## Functions #########################
 ############################################################
+
 
 #Files
 def openfile(f):
     logid = scriptname+'.openfile: '
     try:
         return open(f,'r') if not '.gz' in f[-4:] else gzip.open(f,'rt')
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -58,14 +50,14 @@ def getfilename(dirfile):#to get the name of the file without directory or exten
         elif '/' not in dirfile and "." not in dirfile:
             filename=dirfile
         return str(filename)
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
         )
         log.error(logid+''.join(tbe.format()))
 
-#foldings
+# foldings
 def dofold(listnewold,oldid,precseq,newid,newseq):
     logid = scriptname+'.dofold: '
     try:
@@ -84,7 +76,7 @@ def dofold(listnewold,oldid,precseq,newid,newseq):
         listnewold.extend((oldid,str(precseq),oldstruct,oldscore,newid,str(newseq),newstruct,newscore))
         return listnewold
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -100,7 +92,7 @@ def foldnomat(inputfasta,outputfasta):#fold the new and the old sequences, using
         f.close()
         wr.write(fi)
         wr.close
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -117,7 +109,7 @@ def doalifold(alnfile,outdir):
         foldrestemp.write(fi)
         foldrestemp.close()
         f.close()
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -133,7 +125,7 @@ def getstructure(alifoldtemp):
             if len(item)>0 and 'A' not in item[0] and 'C' not in item[0] and 'G' not in item[0] and 'T' not in item[0] and 'a' not in item[0] and 'c' not in item[0] and 'g' not in item[0] and 't' not in item[0] and 'N' not in item[0] and 'n' not in item[0] and ('.' in item[0] or '(' in item[0] or ')' in item[0]):
                 hairpin=item[0]
                 return str(hairpin)
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -211,7 +203,7 @@ def cal_ent(s):
         Entropy=-1* (EA+EC+EG+ET+EGA)
 
         return Entropy
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -258,7 +250,7 @@ def CalShanon(stkfile):
 
         return aligEnt
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -288,7 +280,7 @@ def comp_5p(ll, lr, sm, ss, precursor, run):
             else:
                 return comp_5p(ll, lr, sm, ss+1, precursor, run+1)
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -354,7 +346,7 @@ def alignTostock(align):
         writes.close()
         return str(writeitem[1])
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -620,7 +612,7 @@ def removekey(d, key):
         r = dict(d)
         del r[key]
         return r
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -638,7 +630,7 @@ def getlowest_list(a, n):
             return list(np.partition(a, b)[:n])
         else:
             return list(None for i in range(n))
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -656,7 +648,7 @@ def gethighest_list(a, n):
             return list(np.partition(a, b)[-n:])
         else:
             return list(None for i in range(n))
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -674,7 +666,7 @@ def getlowest_dict(a, n):
             return dict(heapq.nsmallest(b,a.items(), key=itemgetter(1)))
         else:
             return dict({i:None for i in range(n)})
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -692,7 +684,7 @@ def gethighest_dict(a, n):
             return dict(heapq.nlargest(b,a.items(), key=itemgetter(1)))
         else:
             return dict({i:None for i in range(n)})
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -707,7 +699,7 @@ def convertcol(entry):
             return np.nan
         else:
             return float(entry)
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -725,7 +717,7 @@ def isvalid(x=None):
                 return True
         else:
             return False
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -742,7 +734,7 @@ def isinvalid(x=None):
                 return False
         else:
             return True
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -757,7 +749,7 @@ def makeoutdir(outdir):
         if not os.path.exists(outdir):
             os.makedirs(outdir)
         return outdir
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -769,13 +761,6 @@ def parseseq(sequence):
     try:
         if (isinstance(sequence, StringIO)):
             seq = sequence
-
-        elif ( isinstance(sequence, str) and sequence == 'random' ):
-            rand = "\n".join(createrandseq(length, gc, number, alphabet))
-            seq = StringIO(rand)
-            o = gzip.open('Random.fa.gz','wb')
-            o.write(bytes(rand,encoding='UTF-8'))
-            o.close()
 
         elif (isinstance(sequence, str) and os.path.isfile(sequence)):
             if '.gz' in sequence :
@@ -789,7 +774,7 @@ def parseseq(sequence):
 
         return seq
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -808,7 +793,7 @@ def npprint(a, o=None):#, format_string ='{0:.2f}'):
             o.write(bytes(out,encoding='UTF-8'))
         else:
             print(out)
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
         exc_type, exc_value, exc_tb,
@@ -837,7 +822,7 @@ def print_globaldicts():
     try:
         for name, value in globals().copy().items():
             print(name, value)
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -850,7 +835,7 @@ def print_globallists():
     try:
         for name, value in globals().deepcopy().items():
             print(name, value)
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,

@@ -1,39 +1,34 @@
 #!/usr/bin/env python3
 
-##import modules
+# import modules
 import os
 import argparse
-#import operator
-import math
 import sys
 import re
-import inspect
 import shlex
-import time
 import multiprocessing
-from multiprocessing import set_start_method
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
 import json
-import gzip
 import traceback as tb
 from distutils.spawn import find_executable
-##import Bio modules
+# import Bio modules
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio import AlignIO
 from Bio.Align.Applications import ClustalwCommandline
-
-#Logging
-import datetime
-from lib.logger import makelogdir, setup_multiprocess_logger, checklog
-
-scriptname = os.path.basename(__file__).replace('.py','')
-##load own modules
+# Logging
+import logging
+from lib.logger import makelogdir, makelogfile, listener_process, listener_configurer, worker_configurer
+# load own modules
 from lib.Collection import *
+
+
+log = logging.getLogger(__name__)  # use module name
+# matplotlib.use('Agg')
+scriptname = os.path.basename(__file__).replace('.py', '')
+
 
 def getindex(sequence, specie, precID, precdesc, listnogenomes, listnotingenome, templong, args):#get the index of the original sequence in its genome
     logid = scriptname+'.getindex: '
@@ -123,7 +118,7 @@ def getindex(sequence, specie, precID, precdesc, listnogenomes, listnotingenome,
             returnlst=[]
             return returnlst,listnogenomes,listnotingenome,templong,minusstrand
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -189,8 +184,8 @@ def getindex2mat(sequence, specie, precID, precdesc, listnogenomes, listnotingen
                             flagseq=1
                             #gseq=str(i.seq)
                             gseq=str((i.seq).reverse_complement()) #minus strand
-                            #cutlongbefore=100 
-                            #cutlongafter=100 
+                            #cutlongbefore=100
+                            #cutlongafter=100
                             cutlongbefore=250 #Not 250?
                             cutlongafter=250 #Not 250?
                             beforeseq=len(gseq[:precind])
@@ -210,7 +205,7 @@ def getindex2mat(sequence, specie, precID, precdesc, listnogenomes, listnotingen
             listnotingenome.append(precID)
             return "",listnogenomes,listnotingenome
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -353,7 +348,7 @@ def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop
 
         return listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listnogenomes,listnotingenome,templong,listgoodnew
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -2021,7 +2016,7 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
 
         return oldlstlstr,oldlstlstl,oldparts,finaloldcomp,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listgoodnew
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -2154,7 +2149,7 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
             log.debug("no predicted mir*")
             return "",-1,-1,'p'
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -2292,7 +2287,7 @@ def getmirstarbak(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
             log.debug("no predicted mir*")
             return "",-1,-1,'p'
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -2394,7 +2389,7 @@ def predict(align,matId,newmatID,matfile,filename,precdescrip,mapfile,directory,
                         listremovedbroken.append(famsplit[1].strip())
         return listremovedbroken,listremovedscore
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -2521,7 +2516,7 @@ def checknomat(precfile,mapfile,matfile,directory,precfilename,listremovedbroken
             flagnomatexists=False
             log.debug("all precursors has mature, at least one")
         return flagnomatexists,nomats,listremovedbroken,listremovedscore,listnomat
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -2847,7 +2842,7 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
 
         return finalpredictedspos,(finalpredictedepos+1)
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -3010,15 +3005,18 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
 
         return int(countcorrected),int(countcorrectedTonew),listmisalignedcorr,listcorrected,listcorrectedori
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
         )
         log.error(logid+''.join(tbe.format()))
 
-def sublist(filename, args):
+
+def sublist(queue, configurer, level, filename, args):
     logid = scriptname+'.sublist: '
+    configurer(queue, level)
+    print('SUB: '+str(log)+' '+str(logging))
     log.debug(logid+'Starting to process '+str(filename))
     try:
         filesdir=str(args.famdir)#dir for families
@@ -4428,9 +4426,9 @@ def sublist(filename, args):
         log.debug([listofold,listofnew,listofnewloop,listofoldloop,listremovedbroken,listremovedscore,listofmirstar])
         log.debug(list2mat)
         if os.path.isfile(outdir+filename.strip()+"-res.fa"):
-            fr1=os.popen("rm "+outdir+filename.strip()+"-res.fa")
+            os.popen("rm "+outdir+filename.strip()+"-res.fa")
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -4448,7 +4446,8 @@ def parseargs():
     parser.add_argument("-d", "--maturedir", type=str, default='', help='Directory of matures')
     parser.add_argument("-o", "--outdir", type=str, default='', help='Directory for output')
     parser.add_argument("-e", "--extension", type=int, default=10, help='Extension of nucleotides for precursor cutting')
-    parser.add_argument("--loglevel", type=str, default='WARNING', choices=['WARNING','ERROR','INFO','DEBUG'], help="Set log level")
+    parser.add_argument("-l", "--logdir", type=str, default='LOGS', help='Directory to write logfiles to')
+    parser.add_argument("--loglevel", type=str, default='WARNING', choices=['WARNING','ERROR','INFO','DEBUG','CRITICAL'], help="Set log level")
 
     if len(sys.argv)==1:
         parser.print_help(sys.stderr)
@@ -4456,54 +4455,65 @@ def parseargs():
 
     return parser.parse_args()
 
+
+def main(args):
+    try:
+
+        #  Logging configuration
+        logdir = args.logdir
+        logfile = str.join(os.sep,[os.path.abspath(logdir),scriptname+'.log'])
+
+        makelogdir(logdir)
+        makelogfile(logfile)
+
+        #  Multiprocessing with spawn
+        nthreads = args.cores or 2
+        multiprocessing.set_start_method('spawn')  # set multiprocessing start method to safe spawn
+        pool = multiprocessing.Pool(processes=nthreads, maxtasksperchild=1)
+
+        queue = multiprocessing.Manager().Queue(-1)
+        listener = multiprocessing.Process(target=listener_process, args=(queue, listener_configurer, logfile, args.loglevel))
+        listener.start()
+
+        worker_configurer(queue, args.loglevel)
+
+        log.info(logid+'Running '+scriptname+' on '+str(args.cores)+' cores.')
+        log.info(logid+'CLI: '+sys.argv[0]+' '+'{}'.format(' '.join( [shlex.quote(s) for s in sys.argv[1:]] )))
+
+        lfams = []
+        with openfile(args.families) as filelist:
+            for line in filelist:
+                lfams.append(line.strip())
+
+        for fam in lfams:
+            #sublist(queue, fam, args)
+            pool.apply_async(sublist, args=(queue, worker_configurer, args.loglevel, fam, args))
+        pool.close()
+        pool.join()
+        queue.put_nowait(None)
+        listener.join()
+
+    except Exception:
+        exc_type, exc_value, exc_tb = sys.exc_info()
+        tbe = tb.TracebackException(
+            exc_type, exc_value, exc_tb,
+        )
+        log.error(logid+''.join(tbe.format()))
+
 ##############################MAIN##############################
 
 if __name__ == '__main__':
 
     logid = scriptname+'.main: '
     try:
-        set_start_method("spawn")  # set multiprocessing start method to safe spawn
-        args=parseargs()
-        logtime = str(datetime.datetime.now().strftime("%Y%m%d_%H_%M_%S_%f"))
-        logdir = 'LOGS'+os.sep+logtime
-        makelogdir(logdir)
-        logfile = os.path.abspath(logdir)+os.sep+scriptname+'.log'
+        args = parseargs()
 
-        #find_executable('clustalw2') or sys.exit('Please install clustalw2 to run this')
+        # find_executable('clustalw2') or sys.exit('Please install clustalw2 to run this')
         find_executable('dialign2-2') or sys.exit('Please install dialign2-2 to run this')
 
-        if not os.path.isfile(os.path.abspath(logfile)):
-            open(logfile,'a').close()
-        else:
-            ts = str(datetime.datetime.fromtimestamp(os.path.getmtime(os.path.abspath(logfile))).strftime("%Y%m%d_%H_%M_%S"))
-            shutil.move(logfile,logdir+os.sep+scriptname+'_'+ts+'.log')
+        main(args)
 
-        log = setup_multiprocess_logger(log_file='stderr', logformat='%(asctime)s %(levelname)-8s %(name)-12s %(message)s', datefmt='%m-%d %H:%M')
-        log = setup_multiprocess_logger(log_file=logfile, filemode='a', logformat='%(asctime)s %(levelname)-8s %(name)-12s %(message)s', datefmt='%m-%d %H:%M')
-
-        log.setLevel(args.loglevel)
-        log.info(logid+'Running '+scriptname+' on '+str(args.cores)+' cores.')
-        log.info(logid+'CLI: '+sys.argv[0]+' '+'{}'.format(' '.join( [shlex.quote(s) for s in sys.argv[1:]] )))
-
-        nthreads=args.cores or 2
-        lfams = []
-
-        with openfile(args.families) as filelist:
-            for line in filelist:
-                lfams.append(line.strip())
-        log.debug(logid+'Families to process: '+str(lfams))
-
-        outd=args.outdir
-
-        pool = multiprocessing.Pool(processes=nthreads, maxtasksperchild=1)
-
-        for fam in lfams:
-            log.info('Working on '+str(fam))
-            pool.apply_async(sublist, args=(fam, args))
-        pool.close()
-        pool.join()
-
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
