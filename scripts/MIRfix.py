@@ -3276,7 +3276,7 @@ def sublist(filename, args):
                     
                     # On miRBase some mature were assigned for the same miRNAs.
                     if mspos == -1 or mepos == -1:
-                        log.error(logid+'Referred mir or mir* from '+pdescsplit+' did not fit into the precursor, maybe some reference is repeated on mapping file?')
+                        log.error(logid+'Referred mir or mir* from '+pid+' did not fit into the precursor, maybe some reference is repeated on mapping file?')
                         sys.exit()
                     
                     xcutseq=len(pseq[:mspos])#used in case the seq not found in the genome
