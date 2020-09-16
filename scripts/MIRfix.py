@@ -3273,7 +3273,12 @@ def sublist(filename, args):
 #                        mspos=pseq.rfind(str(Seq(fmatseq).reverse_complement()))
 #                        mepos=pseq.find(str(Seq(ematseq).reverse_complement()))
                     # Now we have found start and end position on plus and minus strands
-
+                    
+                    # On miRBase some mature were assigned for the same miRNAs.
+                    if mspos == -1 or mepos == -1:
+                        log.error(logid+'Referred mir or mir* from '+pdescsplit+' did not fit into the precursor, maybe some reference is repeated on mapping file?')
+                        sys.exit()
+                    
                     xcutseq=len(pseq[:mspos])#used in case the seq not found in the genome
                     ycutseq=len(pseq[mepos+1:])
 
