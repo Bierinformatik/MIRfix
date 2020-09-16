@@ -435,7 +435,7 @@ def detect_pairs(complete_array, longseq, mat1seq, curmatseq, curmatstar):
         #substring = None
         #update_index = None
         (pair0, number_pair) = iterate_over_pairs(complete_array, columns, curmatseq, curmatstar, longseq, number_pair)
-    
+
     #Here consider start in 0 with complete_array_one
     # Detect overlapping
     if columns_one > 1:
@@ -451,10 +451,10 @@ def detect_pairs(complete_array, longseq, mat1seq, curmatseq, curmatstar):
     pair = Merge(pair0, pair1)
     return (pair, number_pair)
 
-def Merge(dict1, dict2): 
-    merging = {**dict1, **dict2} 
+def Merge(dict1, dict2):
+    merging = {**dict1, **dict2}
     return merging
-    
+
 def iterate_over_pairs(complete_array, columns, curmatseq, curmatstar, longseq, number_pair):
     #type = start0 and start1
     # [M,S,S,M,S]
@@ -496,7 +496,7 @@ def iterate_over_pairs(complete_array, columns, curmatseq, curmatstar, longseq, 
                 identity_first = complete_array[j+1][-1]
             else:
                 identity_first = complete_array[j][-1]  # M or S
-            
+
             if identity_first == "M":
                 start_temp_m = substring.find(curmatseq)  # Start M in sub
                 end_temp_m = (start_temp_m + len(curmatseq)) - 1
@@ -550,7 +550,7 @@ def check_borders (value,limitlen,mode):
     else:
         print("Value not accepted")
         return None
-                
+
 
 def define_best_pair(pairs, distances_loop, startprecursor,
                      endprecursor, precursorlen, flanking, longseq):
@@ -582,7 +582,7 @@ def define_best_pair(pairs, distances_loop, startprecursor,
     try:
         return (coor1, coor2, correctfinalseq)
     except Exception as err:
-        log.error("ERROR: mir or mir* did not fit into the precursor limits", [all_distances_sorted[i]], startprecursor, endprecursor)
+        log.error("ERROR: mir or mir* did not fit into the precursor limits", [all_distances_sorted], startprecursor, endprecursor)
         sys.exit()
 
 def find_positions(longseq, mat1seq, curmatseq, curmatstar, flanking):
