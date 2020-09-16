@@ -1,6 +1,6 @@
 import os
 import sys
-# other modules
+import logging
 import numpy as np
 import heapq
 from operator import itemgetter
@@ -13,12 +13,11 @@ from io import StringIO
 from Bio import AlignIO
 # import ViennaRNA
 import RNA
-import lib.logger
 
 
+log = logging.getLogger(__name__)  # use module name
 scriptname = __name__
-log = lib.logger.logger('')
-print("COLLECTION: "+str(scriptname)+str(log)+str(log.logfile_handlers))
+log.debug('LOGGING IN COLLECTION'+str(scriptname)+str(log)+str(log.handlers))
 
 
 ############################################################

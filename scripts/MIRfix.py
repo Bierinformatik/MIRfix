@@ -6,9 +6,7 @@ import argparse
 import sys
 import re
 import shlex
-import datetime
 import multiprocessing
-from multiprocessing import set_start_method
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -21,12 +19,14 @@ from Bio.Seq import Seq
 from Bio import AlignIO
 from Bio.Align.Applications import ClustalwCommandline
 # Logging
-from lib.logger import logger
+import logging
+from lib.logger import makelogdir, makelogfile, listener_process, listener_configurer, root_configurer
 # load own modules
 from lib.Collection import *
 
-
-matplotlib.use('Agg')
+#log = logging.getLogger('MIRfix')
+log = logging.getLogger(__name__)  # use module name
+# matplotlib.use('Agg')
 scriptname = os.path.basename(__file__).replace('.py', '')
 
 
@@ -3012,9 +3012,9 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
         )
         log.error(logid+''.join(tbe.format()))
 
-def sublist(filename, logging, args):
+
+def sublist(queue, filename, args):
     logid = scriptname+'.sublist: '
-    log = logging.logger
     print('SUB: '+str(log)+' '+str(logging))
     log.debug(logid+'Starting to process '+str(filename))
     try:
@@ -4422,7 +4422,7 @@ def parseargs():
     parser.add_argument("-o", "--outdir", type=str, default='', help='Directory for output')
     parser.add_argument("-e", "--extension", type=int, default=10, help='Extension of nucleotides for precursor cutting')
     parser.add_argument("-l", "--logdir", type=str, default='LOGS', help='Directory to write logfiles to')
-    parser.add_argument("--loglevel", type=str, default='WARNING', choices=['WARNING','ERROR','INFO','DEBUG'], help="Set log level")
+    parser.add_argument("--loglevel", type=str, default='WARNING', choices=['WARNING','ERROR','INFO','DEBUG','CRITICAL'], help="Set log level")
 
     if len(sys.argv)==1:
         parser.print_help(sys.stderr)
@@ -4430,41 +4430,65 @@ def parseargs():
 
     return parser.parse_args()
 
+
+def main(args):
+    try:
+
+        #  Logging configuration
+        logdir = args.logdir
+        #logfile = str.join(os.sep,[os.path.abspath(logdir),scriptname+'_'+str(fam)+'.log'])
+        logfile = str.join(os.sep,[os.path.abspath(logdir),scriptname+'.log'])
+        makelogdir(logdir)
+        makelogfile(logfile)
+
+        #  Multiprocessing with spawn
+        nthreads = args.cores or 2
+        multiprocessing.set_start_method('spawn')  # set multiprocessing start method to safe spawn
+        pool = multiprocessing.Pool(processes=nthreads, maxtasksperchild=1)
+
+        queue = multiprocessing.Queue(-1)
+        listener = multiprocessing.Process(target=listener_process, args=(queue, logfile, args.loglevel))
+        listener.start()
+
+        root_configurer(queue, args.loglevel)
+
+        log.info("MAIN: "+str(scriptname)+str(log)+str(log.handlers))
+        log.info(logid+'Running '+scriptname+' on '+str(args.cores)+' cores.')
+        log.info(logid+'CLI: '+sys.argv[0]+' '+'{}'.format(' '.join( [shlex.quote(s) for s in sys.argv[1:]] )))
+
+        lfams = []
+        with openfile(args.families) as filelist:
+            for line in filelist:
+                lfams.append(line.strip())
+
+        for fam in lfams:
+            pool.apply_async(sublist, args=(queue, fam, args))
+        pool.close()
+        pool.join()
+
+        queue.put_nowait(None)
+        listener.join()
+
+
+    except Exception:
+        exc_type, exc_value, exc_tb = sys.exc_info()
+        tbe = tb.TracebackException(
+            exc_type, exc_value, exc_tb,
+        )
+        log.error(logid+''.join(tbe.format()))
+
 ##############################MAIN##############################
 
 if __name__ == '__main__':
 
     logid = scriptname+'.main: '
     try:
-        set_start_method("spawn")  # set multiprocessing start method to safe spawn
         args = parseargs()
 
         # find_executable('clustalw2') or sys.exit('Please install clustalw2 to run this')
         find_executable('dialign2-2') or sys.exit('Please install dialign2-2 to run this')
 
-        nthreads = args.cores or 2
-        lfams = []
-
-        with openfile(args.families) as filelist:
-            for line in filelist:
-                lfams.append(line.strip())
-
-        pool = multiprocessing.Pool(processes=nthreads, maxtasksperchild=1)
-        logdir = args.logdir
-
-        for fam in lfams:
-            logfile = str.join(os.sep,[os.path.abspath(logdir),scriptname+'_'+str(fam)+'.log'])
-            log = logger('', logdir, logfile, args.loglevel)
-            log._setup_logger()
-            log._makelogdir()
-            log._makelogfile()
-            log.info(logid+'Running '+scriptname+' on '+str(args.cores)+' cores.')
-            log.info(logid+'CLI: '+sys.argv[0]+' '+'{}'.format(' '.join( [shlex.quote(s) for s in sys.argv[1:]] )))
-            log.info('Working on '+str(fam))
-            print('MAIN: '+str(log))
-            pool.apply_async(sublist, args=(fam, log, args))
-        pool.close()
-        pool.join()
+        main(args)
 
     except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()

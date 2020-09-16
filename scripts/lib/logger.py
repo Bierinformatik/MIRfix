@@ -1,124 +1,126 @@
-import logging
-import multiprocessing
 import os
 import sys
-import inspect
+import logging
+import logging.handlers
+import multiprocessing
 import traceback as tb
 import datetime
 import shutil
+from time import sleep
+
+# Heavily inspired by https://docs.python.org/3/howto/logging-cookbook.html#logging-to-a-single-file-from-multiple-processes
+# Because you'll want to define the logging configurations for listener and workers, the
+# listener and worker process functions take a configurer parameter which is a callable
+# for configuring logging for that process. These functions are also passed the queue,
+# which they use for communication.
+#
+# In practice, you can configure the listener however you want, but note that in this
+# simple example, the listener does not apply level or filter logic to received records.
+# In practice, you would probably want to do this logic in the worker processes, to avoid
+# sending events which would be filtered out between processes.
+#
 
 
-scriptname = __name__
+# The size of the rotated files is made small so you can see the results easily.
+def listener_configurer(logfile, loglevel):
+    root = logging.getLogger()
+    file_handler = logging.FileHandler(logfile, 'a')
+    console_handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+    root.addHandler(file_handler)
+    root.addHandler(console_handler)
+    root.setLevel(loglevel)
 
 
-class logger():
-    def __init__(self, name, logdir=None, logfile=None, level=None, lfmt='%(asctime)s %(levelname)-8s %(name)-12s %(message)s', dfmt='%m-%d %H:%M', multi=None):
-        if multi:
-            self.logger = multiprocessing.Logger()
-        else:
-            self.logger = logging.getLogger(name)
-
-        self.logtime = str(datetime.datetime.now().strftime("%Y%m%d_%H_%M_%S_%f"))
-        self.logdir = logdir
-        self.logfile = logfile
-        self.logformat = lfmt
-        self.datefmt = dfmt
-        self.propagate = True
-        self.stream_handlers = None
-        self.logfile_handlers = None
-
-    def _makelogdir(self):
-        if not os.path.isabs(self.logdir):
-            self.logdir = os.path.abspath(self.logdir)
-        if not os.path.exists(self.logdir):
-            try:
-                os.makedirs(self.logdir)
-            except OSError:
-                # If directory has already been created or is inaccessible
-                if not os.path.exists(self.logdir):
-                    sys.exit('Problem creating directory '+self.logdir)
-
-
-    def _setup_logger(self):
-        """Function setup as many loggers as you want"""
-        self.stream_handler = logging.StreamHandler(sys.stderr)
-        self.stream_handler.setFormatter(logging.Formatter(fmt=self.logformat, datefmt=self.datefmt))
-        self.logger.addHandler(self.stream_handler)
-
-
-    def _addHandler(self):
-        if self.logfile != 'stderr':
-            self.logfile_handler = logging.FileHandler(self.logfile, mode='a')
-            self.logfile_handler.setFormatter(logging.Formatter(fmt=self.lfmt, datefmt=self.dfmt))
-            self.logger.addHandler(self.logifle_handler)
-
-
-    def _checklog(self):
-        test = logging.getLogger()
-        if not (test.hasHandlers()):
-            return False
-        else:
-            if not len(test.handlers) > 1:
-                return False
-            else:
-                return True
-
-
-    def _makelogfile(self):
-        if not os.path.isfile(os.path.abspath(self.logfile)) or os.stat(self.logfile).st_size == 0:
-            open(self.logfile,'a').close()
-        else:
-            ts = str(datetime.datetime.fromtimestamp(os.path.getmtime(os.path.abspath(self.logfile))).strftime("%Y%m%d_%H_%M_%S"))
-            shutil.move(self.logfile,logfile.replace('.log', '')+'_'+ts+'.log')
-
-
-    def info(self, msg):
-        self.logger.info(msg)
-
-
-    def debug(self, msg):
-        self.logger.debug(msg)
-
-
-    def warning(self, msg):
-        self.logger.warning(msg)
-
-
-    def error(self, msg):
-        self.logger.error(msg)
-
-
-if __name__ == '__main__':
+# This is the listener process top-level loop: wait for logging events
+# (LogRecords)on the queue and handle them, quit when you get a None for a
+# LogRecord.
+def listener_process(queue, logfile, loglevel):
     try:
-        # set up logging to file
-        logger = logger()
-        logger.setup_logger(name='', log_file='stderr', logformat='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M', level='WARNING')
-
-        # define a Handler which writes INFO messages or higher to the sys.stderr
-        #console = logging.StreamHandler()
-        #console.setLevel(logging.INFO)
-        # set a format which is simpler for console use
-        #formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
-        # tell the handler to use this format
-        #console.setFormatter(formatter)
-        # add the handler to the root logger
-        #logging.getLogger('').addHandler(console)
-
-        # Now, we can log to the root logger, or any other logger. First the root...
-        #logging.info('Imported logger.py')
-        # Now, use this in code defining a couple of other loggers which might represent areas in your
-        # application, e.g.:
-        #log = logging.getLogger('logger.main')
-
+        listener_configurer(logfile, loglevel)
+        while True:
+            while not queue.empty():
+                record = queue.get()
+                logger = logging.getLogger(record.name)
+                logger.handle(record)
+            sleep(1)
     except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
         )
-        logging.error(''.join(tbe.format()))
+        print('LOGGING ERROR'.join(tbe.format()), file=sys.stderr)
 
 
-#def eprint(log, *args, **kwargs):
-#    log.error(*args, **kwargs)
-#
-# log.py ends here
+# The worker configuration is done at the start of the worker process run.
+# Each process will run the logging configuration code when it starts.
+def root_configurer(queue, loglevel):
+    h = logging.handlers.QueueHandler(queue)  # Just the one handler needed
+    root = logging.getLogger()
+    root.addHandler(h)
+    # logformat = '%(asctime)s %(levelname)-8s %(name)-12s %(message)s'
+    # datefmt = '%m-%d %H:%M'
+    # console_handler = logging.StreamHandler(sys.stderr)
+    # console_handler.setFormatter(logging.Formatter(fmt=logformat,datefmt=datefmt))
+    # file_handler = logging.FileHandler(logfile, mode='a')
+    # file_handler.setFormatter(logging.Formatter(fmt=logformat,datefmt=datefmt))
+    # #logging.getLogger('').addHandler(console_handler)
+    # log.addHandler(console_handler)
+    # log.addHandler(file_handler)
+    # log.setLevel(args.loglevel)
+
+    # send all messages, for demo; no other level or filter logic applied.
+    root.setLevel(loglevel)
+
+
+def checklog():
+    test = logging.getLogger()
+    if not (test.hasHandlers()):
+        return False
+    else:
+        if not len(test.handlers) > 1:
+            return False
+        else:
+            return True
+
+
+def makelogdir(logdir):
+    if not os.path.isabs(logdir):
+        logdir = os.path.abspath(logdir)
+        if not os.path.exists(logdir):
+            try:
+                os.makedirs(logdir)
+            except OSError:
+                # If directory has already been created or is inaccessible
+                if not os.path.exists(logdir):
+                    sys.exit('Problem creating directory '+logdir)
+
+
+def makelogfile(logfile):
+    if not os.path.isfile(os.path.abspath(logfile)) or os.stat(logfile).st_size == 0:
+        open(logfile, 'a').close()
+    else:
+        ts = str(datetime.datetime.fromtimestamp(os.path.getmtime(os.path.abspath(logfile))).strftime("%Y%m%d_%H_%M_%S"))
+        shutil.move(logfile,logfile.replace('.log', '')+'_'+ts+'.log')
+
+
+def setup_logger(name, log_file, filemode='a', logformat=None, datefmt=None, level='WARNING'):
+    """Function setup as many loggers as you want"""
+
+    log = logging.getLogger(name)
+    if log_file != 'stderr':
+        handler = logging.FileHandler(log_file, mode=filemode)
+    else:
+        handler = logging.StreamHandler(sys.stderr)
+
+    handler.setFormatter(logging.Formatter(fmt=logformat,datefmt=datefmt))
+
+    log.setLevel(level)
+    log.addHandler(handler)
+
+    return log
+
+
+# logger.py ends here
