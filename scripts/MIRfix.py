@@ -3619,8 +3619,8 @@ def sublist(filename, args):
                             #    log.debug(logid+'Searching for curmatstar in '+str(starrec)+' with '+';'.join([curmatID.strip(),starrecID.strip(),resprecid.strip(),starrec.description]))
 
                     if not curmatstar:
-                        log.error(logid+'Not possible to define curmatstar for '+str(matfile)+' and '+str(outdir+filename.strip()+"-mirstar.fa"))
-                        #sys.exit(1)
+                        log.error(logid+'Not possible to define curmatstar for '+ resprecid +' in '+str(matfile)+' and '+str(outdir+filename.strip()+"-mirstar.fa"))
+                        sys.exit()
 
                     log.debug(["coor1temp",longseq,curmatseq,curmatstar,resprecid])
                     #coortemp1=int(longseq.index(curmatseq))
