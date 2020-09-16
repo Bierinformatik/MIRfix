@@ -20,7 +20,7 @@ from Bio import AlignIO
 from Bio.Align.Applications import ClustalwCommandline
 # Logging
 import logging
-from lib.logger import makelogdir, makelogfile, listener_process, listener_configurer, root_configurer
+from lib.logger import makelogdir, makelogfile, listener_process, listener_configurer, worker_configurer
 # load own modules
 from lib.Collection import *
 
@@ -3013,8 +3013,9 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
         log.error(logid+''.join(tbe.format()))
 
 
-def sublist(queue, filename, args):
+def sublist(queue, configurer, level, filename, args):
     logid = scriptname+'.sublist: '
+    configurer(queue, level)
     print('SUB: '+str(log)+' '+str(logging))
     log.debug(logid+'Starting to process '+str(filename))
     try:
@@ -4436,8 +4437,8 @@ def main(args):
 
         #  Logging configuration
         logdir = args.logdir
-        #logfile = str.join(os.sep,[os.path.abspath(logdir),scriptname+'_'+str(fam)+'.log'])
         logfile = str.join(os.sep,[os.path.abspath(logdir),scriptname+'.log'])
+
         makelogdir(logdir)
         makelogfile(logfile)
 
@@ -4446,13 +4447,12 @@ def main(args):
         multiprocessing.set_start_method('spawn')  # set multiprocessing start method to safe spawn
         pool = multiprocessing.Pool(processes=nthreads, maxtasksperchild=1)
 
-        queue = multiprocessing.Queue(-1)
-        listener = multiprocessing.Process(target=listener_process, args=(queue, logfile, args.loglevel))
+        queue = multiprocessing.Manager().Queue(-1)
+        listener = multiprocessing.Process(target=listener_process, args=(queue, listener_configurer, logfile, args.loglevel))
         listener.start()
 
-        root_configurer(queue, args.loglevel)
+        worker_configurer(queue, args.loglevel)
 
-        log.info("MAIN: "+str(scriptname)+str(log)+str(log.handlers))
         log.info(logid+'Running '+scriptname+' on '+str(args.cores)+' cores.')
         log.info(logid+'CLI: '+sys.argv[0]+' '+'{}'.format(' '.join( [shlex.quote(s) for s in sys.argv[1:]] )))
 
@@ -4462,7 +4462,8 @@ def main(args):
                 lfams.append(line.strip())
 
         for fam in lfams:
-            pool.apply_async(sublist, args=(queue, fam, args))
+            #sublist(queue, fam, args)
+            pool.apply_async(sublist, args=(queue, worker_configurer, args.loglevel, fam, args))
         pool.close()
         pool.join()
 

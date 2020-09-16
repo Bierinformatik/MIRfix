@@ -16,7 +16,7 @@ import RNA
 
 
 log = logging.getLogger(__name__)  # use module name
-scriptname = __name__
+scriptname = 'MIRfix.Collection'
 log.debug('LOGGING IN COLLECTION'+str(scriptname)+str(log)+str(log.handlers))
 
 

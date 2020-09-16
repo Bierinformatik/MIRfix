@@ -9,6 +9,9 @@ import shutil
 from time import sleep
 
 # Heavily inspired by https://docs.python.org/3/howto/logging-cookbook.html#logging-to-a-single-file-from-multiple-processes
+# with the help of
+# https://stackoverflow.com/questions/48045978/how-to-log-to-single-file-with-multiprocessing-pool-apply-async
+
 # Because you'll want to define the logging configurations for listener and workers, the
 # listener and worker process functions take a configurer parameter which is a callable
 # for configuring logging for that process. These functions are also passed the queue,
@@ -26,7 +29,8 @@ def listener_configurer(logfile, loglevel):
     root = logging.getLogger()
     file_handler = logging.FileHandler(logfile, 'a')
     console_handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
+    #formatter = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
+    formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
     file_handler.setFormatter(formatter)
     console_handler.setFormatter(formatter)
     root.addHandler(file_handler)
@@ -37,9 +41,9 @@ def listener_configurer(logfile, loglevel):
 # This is the listener process top-level loop: wait for logging events
 # (LogRecords)on the queue and handle them, quit when you get a None for a
 # LogRecord.
-def listener_process(queue, logfile, loglevel):
+def listener_process(queue, configurer, logfile, loglevel):
     try:
-        listener_configurer(logfile, loglevel)
+        configurer(logfile, loglevel)
         while True:
             while not queue.empty():
                 record = queue.get()
@@ -56,22 +60,10 @@ def listener_process(queue, logfile, loglevel):
 
 # The worker configuration is done at the start of the worker process run.
 # Each process will run the logging configuration code when it starts.
-def root_configurer(queue, loglevel):
+def worker_configurer(queue, loglevel):
     h = logging.handlers.QueueHandler(queue)  # Just the one handler needed
     root = logging.getLogger()
     root.addHandler(h)
-    # logformat = '%(asctime)s %(levelname)-8s %(name)-12s %(message)s'
-    # datefmt = '%m-%d %H:%M'
-    # console_handler = logging.StreamHandler(sys.stderr)
-    # console_handler.setFormatter(logging.Formatter(fmt=logformat,datefmt=datefmt))
-    # file_handler = logging.FileHandler(logfile, mode='a')
-    # file_handler.setFormatter(logging.Formatter(fmt=logformat,datefmt=datefmt))
-    # #logging.getLogger('').addHandler(console_handler)
-    # log.addHandler(console_handler)
-    # log.addHandler(file_handler)
-    # log.setLevel(args.loglevel)
-
-    # send all messages, for demo; no other level or filter logic applied.
     root.setLevel(loglevel)
 
 
