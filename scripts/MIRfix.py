@@ -3271,18 +3271,18 @@ def sublist(queue, configurer, level, filename, args):
 #                        mspos=pseq.rfind(str(Seq(fmatseq).reverse_complement()))
 #                        mepos=pseq.find(str(Seq(ematseq).reverse_complement()))
                     # Now we have found start and end position on plus and minus strands
-                    
-                    
-                    
+
+
+
                     xcutseq=len(pseq[:mspos])#used in case the seq not found in the genome
                     ycutseq=len(pseq[mepos+1:])
 
                     if precID==pid:
                         # On miRBase some mature were assigned for the same miRNAs.
                         if mspos == -1 or mepos == -1:
-                            log.error(logid+'Referred mir or mir* from '+pid+' did not fit into the precursor, maybe some reference is repeated on mapping file?') 
+                            log.error(logid+'Referred mir or mir* from '+pid+' did not fit into the precursor, maybe some reference is repeated on mapping file?')
                             sys.exit()
-                            
+
                         long2matseq=""
                         long2matseq, listnogenomes, listnotingenome=getindex2mat(pseq.replace("U", "T"), specie, precID, precDes, listnogenomes, listnotingenome, args)  # from here on we have the reverse complement if seq on minus strand
                         log.debug(logid+'long2matseq: '+str(long2matseq))
@@ -3456,7 +3456,7 @@ def sublist(queue, configurer, level, filename, args):
 
                     #coortemp1=int(mat1seq.index(curmatseq))
                     #coortemp2=int(mat1seq.index(curmatstar))
-                    # Here genome did not exists, then it is reeplaced by the same precursor seq to obtain 
+                    # Here genome did not exists, then it is reeplaced by the same precursor seq to obtain
                     # the mature coordinates
                     (coortemp1, coortemp2, finalseq) = find_positions(mat1seq, mat1seq,
                                                  curmatseq, curmatstar,
@@ -3493,7 +3493,7 @@ def sublist(queue, configurer, level, filename, args):
                     #log.debug(logid+str(['coor not',startmat,endmat]))
 
                     if star:
-                        startmatstar=coortemp2                        
+                        startmatstar=coortemp2
                         endmatstar=startmatstar+int(len(curmatstar)-1)
                         #startmatstar=int(tempnomirseq.find(curmatstar)) #CAVH search on region without mir
                         #endmatstar=startmatstar+int(len(curmatstar)-1)
@@ -4173,96 +4173,98 @@ def sublist(queue, configurer, level, filename, args):
         sumall.append(newshan[4])
         sumall.append(oldshan[4])
 
-        ind = np.arange(N)    # the x locations for the groups
-        width = 0.35       # the width of the bars: can also be len(x) sequence
+        #ind = np.arange(N)    # the x locations for the groups
+        #width = 0.35       # the width of the bars: can also be len(x) sequence
 
-        pdf, ax = plt.subplots()
+        ### Plot
+        #pdf, ax = plt.subplots()
 
-        if Totalrem[0]==0:
-            Totalrem[0]=0.15
-            p1 = ax.bar(ind+width, Totalrem, width, color='#FFFFFF',edgecolor='black')#,tick_label='Total')
-        else:
-            p1 = ax.bar(ind+width, Totalrem, width, color='#FF0000')#,tick_label='Total')
-        if Totalproc[0]==0:
-            Totalproc[0]=0.15
-            p2 = ax.bar(ind+width*2, Totalproc, width, color='#FFFFFF',edgecolor='black')
-        else:
-            p2 = ax.bar(ind+width*2, Totalproc, width,bottom=0,color='#BB0000')#,'grey','blue','yellow','lime'])
+        #if Totalrem[0]==0:
+        #    Totalrem[0]=0.15
+        #    p1 = ax.bar(ind+width, Totalrem, width, color='#FFFFFF',edgecolor='black')#,tick_label='Total')
+        #else:
+        #    p1 = ax.bar(ind+width, Totalrem, width, color='#FF0000')#,tick_label='Total')
+        #if Totalproc[0]==0:
+        #    Totalproc[0]=0.15
+        #    p2 = ax.bar(ind+width*2, Totalproc, width, color='#FFFFFF',edgecolor='black')
+        #else:
+        #    p2 = ax.bar(ind+width*2, Totalproc, width,bottom=0,color='#BB0000')#,'grey','blue','yellow','lime'])
 
         #COL2/seq-distribution
-        if seq0mat[1]==0:
-            seq0mat[1]=0.15
-            p3 = ax.bar(ind+width, seq0mat, width,color='#FFFFFF',edgecolor='black')
-        else:
-            p3 = ax.bar(ind+width, seq0mat, width,color='#660000')
+        #if seq0mat[1]==0:
+        #    seq0mat[1]=0.15
+        #    p3 = ax.bar(ind+width, seq0mat, width,color='#FFFFFF',edgecolor='black')
+        #else:
+        #    p3 = ax.bar(ind+width, seq0mat, width,color='#660000')
 
-        if seq1mat[1]==0:
-            seq1mat[1]=0.15
-            p4 = ax.bar(ind+width*2, seq1mat, width,bottom=0,color='#FFFFFF',edgecolor='black')
-        else:
-            p4 = ax.bar(ind+width*2, seq1mat, width,bottom=0,color='#669900')#,tick_label='Sequences\n Distribution')
+        #if seq1mat[1]==0:
+        #    seq1mat[1]=0.15
+        #    p4 = ax.bar(ind+width*2, seq1mat, width,bottom=0,color='#FFFFFF',edgecolor='black')
+        #else:
+        #    p4 = ax.bar(ind+width*2, seq1mat, width,bottom=0,color='#669900')#,tick_label='Sequences\n Distribution')
 
-        if seq2mat[1]==0:
-            seq2mat[1]=0.15
-            p5 = ax.bar(ind+width*3, seq2mat, width,bottom=0,color='#FFFFFF',edgecolor='black')
-        else:
-            p5 = ax.bar(ind+width*3, seq2mat, width,bottom=0,color='#996600')
+        #if seq2mat[1]==0:
+        #    seq2mat[1]=0.15
+        #    p5 = ax.bar(ind+width*3, seq2mat, width,bottom=0,color='#FFFFFF',edgecolor='black')
+        #else:
+        #    p5 = ax.bar(ind+width*3, seq2mat, width,bottom=0,color='#996600')
 
         #col3/flipped
-        if flippednotcorr[2]==0:
-            flippednotcorr[2]=0.15
-            p6 = ax.bar(ind+width*2, flippednotcorr, width,color='#FFFFFF',edgecolor='black')#,tick_label='Changed\n sequences')
-        else:
-            p6 = ax.bar(ind+width*2, flippednotcorr, width,color='#0000FF')#,tick_label='Changed\n sequences')
+        #if flippednotcorr[2]==0:
+        #    flippednotcorr[2]=0.15
+        #    p6 = ax.bar(ind+width*2, flippednotcorr, width,color='#FFFFFF',edgecolor='black')#,tick_label='Changed\n sequences')
+        #else:
+        #    p6 = ax.bar(ind+width*2, flippednotcorr, width,color='#0000FF')#,tick_label='Changed\n sequences')
 
-        if flippedcorr[2]==0:
-            flippedcorr[2]=0.15
-            p7 = ax.bar(ind+width*3, flippedcorr, width,bottom=0,color='#FFFFFF',edgecolor='black')
-        else:
-            p7 = ax.bar(ind+width*3, flippedcorr, width,bottom=0,color='#00CCFF')
+        #if flippedcorr[2]==0:
+        #    flippedcorr[2]=0.15
+        #    p7 = ax.bar(ind+width*3, flippedcorr, width,bottom=0,color='#FFFFFF',edgecolor='black')
+        #else:
+        #    p7 = ax.bar(ind+width*3, flippedcorr, width,bottom=0,color='#00CCFF')
 
         #col4/nomats
-        if Nomatspred[3]==0:
-            Nomatspred[3]=0.15
-            p8 = ax.bar(ind+width*2, Nomatspred, width,color='#FFFFFF',edgecolor='black')#,tick_label='Precursors\n without \n mature(s)')
-        else:
-            p8 = ax.bar(ind+width*2, Nomatspred, width,color=['#7D7D7D'])#,tick_label='Precursors\n without \n mature(s)')
+        #if Nomatspred[3]==0:
+        #    Nomatspred[3]=0.15
+        #    p8 = ax.bar(ind+width*2, Nomatspred, width,color='#FFFFFF',edgecolor='black')#,tick_label='Precursors\n without \n mature(s)')
+        #else:
+        #    p8 = ax.bar(ind+width*2, Nomatspred, width,color=['#7D7D7D'])#,tick_label='Precursors\n without \n mature(s)')
 
-        if Nomatsnotpred[3]==0:
-            Nomatsnotpred[3]=0.15
-            p9 = ax.bar(ind+width*3, Nomatsnotpred, width,bottom=0,color='#FFFFFF',edgecolor='black')
-        else:
-            p9 = ax.bar(ind+width*3, Nomatsnotpred, width,bottom=0,color='#0D0D0D')#,tick_label='Total')
+        #if Nomatsnotpred[3]==0:
+        #    Nomatsnotpred[3]=0.15
+        #    p9 = ax.bar(ind+width*3, Nomatsnotpred, width,bottom=0,color='#FFFFFF',edgecolor='black')
+        #else:
+        #    p9 = ax.bar(ind+width*3, Nomatsnotpred, width,bottom=0,color='#0D0D0D')#,tick_label='Total')
 
         #col5/shanon
-        if newshan[4]==0:
-            newshan[4]=0.15
-            p10 = ax.bar(ind+width*2, newshan, width,color='#FFFFFF',edgecolor='black')
-        else:
-            p10 = ax.bar(ind+width*2, newshan, width,color='#003300')#,tick_label='Alignment\n Entropy')
+        #if newshan[4]==0:
+        #    newshan[4]=0.15
+        #    p10 = ax.bar(ind+width*2, newshan, width,color='#FFFFFF',edgecolor='black')
+        #else:
+        #    p10 = ax.bar(ind+width*2, newshan, width,color='#003300')#,tick_label='Alignment\n Entropy')
 
-        if oldshan[4]==0:
-            oldshan[4]=0.15
-            p11 = ax.bar(ind+width*3, oldshan, width,bottom=0,color='#FFFFFF',edgecolor='black')
-        else:
-            p11 = ax.bar(ind+width*3, oldshan, width,bottom=0,color='#009900')
+        #if oldshan[4]==0:
+        #    oldshan[4]=0.15
+        #    p11 = ax.bar(ind+width*3, oldshan, width,bottom=0,color='#FFFFFF',edgecolor='black')
+        #else:
+        #   p11 = ax.bar(ind+width*3, oldshan, width,bottom=0,color='#009900')
 
-        ax.set_title('Statistics for file (family)-'+str(filename).strip())
-        ax.set_xticks(ind + width+(width))
-        ax.set_ylabel('Number / Entropy')
-        ax.set_title('Statistics for file (family)-'+str(filename).strip())
-        ax.set_xticklabels(('Total', 'Sequences\n Distribution', 'Changed\n sequences', 'Precursors\n without \n mature(s)', 'Alignment\n Entropy'))
-        if max(sumall)>25:
-                offset=int(max(sumall)/25)
-                log.debug(['maxsum',max(sumall),sumall])
-        else:
-                offset=1
+        #ax.set_title('Statistics for file (family)-'+str(filename).strip())
+        #ax.set_xticks(ind + width+(width))
+        #ax.set_ylabel('Number / Entropy')
+        #ax.set_title('Statistics for file (family)-'+str(filename).strip())
+        #ax.set_xticklabels(('Total', 'Sequences\n Distribution', 'Changed\n sequences', 'Precursors\n without \n mature(s)', 'Alignment\n Entropy'))
+        #if max(sumall)>25:
+        #        offset=int(max(sumall)/25)
+        #        log.debug(['maxsum',max(sumall),sumall])
+        #else:
+        #        offset=1
 
-        ax.set_yticks(np.arange(0, max(sumall)+5, offset))
-        ax.legend((p1[0], p2[0],p3[1],p4[1],p5[2],p6[2],p7[3],p8[3],p9[3],p10[4],p11[4]), ('Removed', 'Processed *','Without mature','With 1 mature','With 2 matures','Changed Not Corrected','Corrected misaligned','Predicted','No mature Predicted','New Entropy','Old Entropy'))#,title="White bars refer to zero/doesn't exist")
+        #ax.set_yticks(np.arange(0, max(sumall)+5, offset))
+        #ax.legend((p1[0], p2[0],p3[1],p4[1],p5[2],p6[2],p7[3],p8[3],p9[3],p10[4],p11[4]), ('Removed', 'Processed *','Without mature','With 1 mature','With 2 matures','Changed Not Corrected','Corrected misaligned','Predicted','No mature Predicted','New Entropy','Old Entropy'))#,title="White bars refer to zero/doesn't exist")
 
-        pdf.savefig(outdir+filename.strip()+'statistics.pdf')
-        plt.close('all')
+        #pdf.savefig(outdir+filename.strip()+'statistics.pdf')
+        #plt.close('all')
+
         with open(outdir+filename.strip()+"-summ.txt","a") as summaryfile:
             summaryfile.write("---------------------------Results In Numbers----------------------------\n")
             summaryfile.write("*Number of remained precursors= "+str(int((len(listofold)/2)+(len(list2mat)/3)))+"\n")
