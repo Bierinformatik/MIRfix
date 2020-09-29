@@ -2142,7 +2142,11 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
             mirstar=precursor[mirstarspos:mirstarepos+1]
             mirstar=mirstar.replace("T","U")#here it is minus because we are in the 3p arm, the sposstar is actually the last nucleotide in the mir* which is the firt one folding to mir
             log.debug(["get mirstar here 24",mirstar,mirstarspos,orien])
-            mirflag=True
+            if len(mirstar) <= 20:
+                log.debug("no predicted mir*")
+                return "",-1,-1,'p'
+            else:
+                mirflag=True
             return (str(mirstar),int(mirstarspos),int(mirstarepos),str(orien))
 
         if not mirflag:
