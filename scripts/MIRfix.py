@@ -3653,9 +3653,11 @@ def sublist(queue, configurer, level, filename, args):
                                                  curmatseq, curmatstar,
                                                  userflanking)
 
-                    if coortemp1 == -1 or coortemp2 == -1:
+                    if coortemp1 == None or coortemp2 == None:
+                        #sys.exit(0)
                         log.error(logid+'Not possible to locate miR or miR* in ' + curmatID)
-
+                        exit()
+                        
                     if coortemp2<coortemp1:
                         tempseqex=curmatseq[:]
                         curmatseq=curmatstar[:]
