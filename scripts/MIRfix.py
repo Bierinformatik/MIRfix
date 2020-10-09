@@ -2396,7 +2396,7 @@ def predict(align,matId,newmatID,matfile,filename,precdescrip,mapfile,directory,
                 else:
                     log.debug(["Sequence lot of Ns",precdescrip.split()[1]])
                     if precdescrip.split()[1] not in listremovedcomposition:
-                        listremovedcomposition.append(precdescrip.split()[1].strip())                                
+                        listremovedcomposition.append(precdescrip.split()[1].strip())
         return listremovedbroken,listremovedscore,listremovedcomposition
 
     except Exception:
@@ -3257,7 +3257,7 @@ def sublist(queue, configurer, level, filename, args):
         listnomatbroken=listremovedbroken
         listnomatscore=listremovedscore
         listnomatN = listremovedN
-        
+
         if len(list2mat)>0:
             log.debug(logid+"list2mat: "+str(list2mat))
             for i in range(0,len(list2mat),3):
@@ -3413,12 +3413,18 @@ def sublist(queue, configurer, level, filename, args):
                     (startmat, startmatstar, finalseq) = find_positions(mat1seq, mat1seq,curmatseq, curmatstar,userflanking)
                     endmat = startmat+len(curmatseq)-1
                     endmatstar = (startmatstar+len(curmatstar))-1
+                    #CAVH: Because was find(), check that startmat, endmat, startmatstar, endmatstar have values != None
+                    if startmat == None or endmat == None or startmatstar == None or endmatstar == None:
+                        log.error(logid+'Not possible to locate the mapping referred mir or mir* on the mature file for '+resprecid+' with '+mat2seq)
+                        #sys.exit()
+
                     log.debug(logid+str(["heres new",mat2seq,finalseq,startmat,endmat,startmatstar,endmatstar,curmatseq,curmatstar]))
                     #CAVH: Because was find(), check that startmat, endmat, startmatstar, endmatstar have values != -1
-                    if startmat == -1 or endmat == -1 or startmatstar == -1 or endmatstar == -1:
-                        log.error(logid+'Not possible to locate the mapping referred mir or mir* on the mature file for '+resprecid+' with '+mat2seq)
-                        sys.exit()
-                    if first and second:
+                    #if startmat == -1 or endmat == -1 or startmatstar == -1 or endmatstar == -1:
+                    #    log.error(logid+'Not possible to locate the mapping referred mir or mir* on the mature file for '+resprecid+' with '+mat2seq)
+                    #    sys.exit()
+                    #if first and second:
+                    if first and second and startmat != None and startmatstar != None:
                         coorflag=1
                         #break
 
@@ -3648,7 +3654,7 @@ def sublist(queue, configurer, level, filename, args):
                                                  userflanking)
 
                     if coortemp1 == -1 or coortemp2 == -1:
-                        log.critical(logid+'Not possible to locate miR or miR* in ' + curmatID)
+                        log.error(logid+'Not possible to locate miR or miR* in ' + curmatID)
 
                     if coortemp2<coortemp1:
                         tempseqex=curmatseq[:]
@@ -4091,7 +4097,7 @@ def sublist(queue, configurer, level, filename, args):
                     summaryfile.write(str(listnomatN[j].strip()) + "\n")
             else:
                 summaryfile.write("---> NO Original precursors totally removed ----------------------------\n")
-            
+
             summaryfile.write("\n")
             summaryfile.write("#Precursors with high N content---------------------------\n")
             if len(listnomatN)>0:
@@ -4099,7 +4105,7 @@ def sublist(queue, configurer, level, filename, args):
                     summaryfile.write(str(listnomatN[j].strip()) + "\n")
             else:
                 summaryfile.write("---> All precursors reported valid nucleotide composition with N content > 60 % ----------------------------\n")
-            
+
             summaryfile.write("\n")
             summaryfile.write("---------------------------Precursors without given genome file(s)----------------------------\n")
 
