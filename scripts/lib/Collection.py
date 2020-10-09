@@ -605,6 +605,19 @@ def find_positions(longseq, mat1seq, curmatseq, curmatstar, flanking):
                                                          longseq)
     return (coord1, coord2, correctfinalseq)
 
+def countNSeq(sequence):
+    seq = list(sequence)
+    totalseq = len(seq)
+    if totalseq == 0:
+        return -1, -1, 0
+    n = 0
+    for i in range(len(seq[:])):
+        if(seq[i] == 'N') or (seq[i] == 'n'):
+            n = n + 1
+    totaln = n
+    totalNseq = (float(totaln) / float(totalseq)) * 100
+    return totalNseq, totaln, totalseq
+
 #Utils
 def removekey(d, key):
     logid = scriptname+'.removekey: '

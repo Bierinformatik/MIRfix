@@ -2298,7 +2298,7 @@ def getmirstarbak(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
         )
         log.error(logid+''.join(tbe.format()))
 
-def predict(align,matId,newmatID,matfile,filename,precdescrip,mapfile,directory,listremovedbroken,listremovedscore):
+def predict(align,matId,newmatID,matfile,filename,precdescrip,mapfile,directory,listremovedbroken,listremovedscore,listremovedcomposition):
     logid = scriptname+'.predict: '
     try:
         if directory[-1]!="/":# to work in both cases, user puts / at the end of the directory or not
@@ -2331,67 +2331,73 @@ def predict(align,matId,newmatID,matfile,filename,precdescrip,mapfile,directory,
                 maxindexlist=[]
                 dup=[]
                 # the window is taking substring from the aligned mature line with szie of  real mature, and move nuc by nuc on the aligned prec to see how many nucleotides matching
-                for i in range (0,lastindex+1):#moving alon the precurson, and stop at the last index, where after that will be out of range
-                    countnuc=0
-                    countstar=0
-                    itemmature=str(alnmat[i:i+len(originalmature)])#the window with size of the mature sequence, moving along the
+                #CAVH: First evaluate if there is not a high number of Ns in the sequence
+                (proportionN, totalN, totalseq) = countNSeq(originalseq)
+                if proportionN <= 40 and proportionN > -1: #Number based on RNAfold rules, have to be N content <= 40 from the complete seq
+                    for i in range (0,lastindex+1):#moving along the precursor, and stop at the last index, where after that will be out of range
+                        countnuc=0
+                        countstar=0
+                        itemmature=str(alnmat[i:i+len(originalmature)])#the window with size of the mature sequence, moving along the
 
-                    for char in itemmature:#move in the window to check how many nucleotides we have and not gaps
-                        if char in nuc:
-                            countnuc=countnuc+1
-                    nuclist.append(countnuc)#save number of nucleotides and not gaps in each window
+                        for char in itemmature:#move in the window to check how many nucleotides we have and not gaps
+                            if char in nuc:
+                                countnuc=countnuc+1
+                        nuclist.append(countnuc)#save number of nucleotides and not gaps in each window
 
-                    itemseq=alnseq[i:i+len(originalmature)]
-                    for chars in range(0,len(originalmature)):#count the stars in each window (how many exact matching between mature aligned and the prec aligned)
-                        if itemseq[chars].upper()==itemmature[chars].upper():
-                            countstar=countstar+1
-                    starlist.append(countstar)#save the number of stars at each window
+                        itemseq=alnseq[i:i+len(originalmature)]
+                        for chars in range(0,len(originalmature)):#count the stars in each window (how many exact matching between mature aligned and the prec aligned)
+                            if itemseq[chars].upper()==itemmature[chars].upper():
+                                countstar=countstar+1
+                        starlist.append(countstar)#save the number of stars at each window
 
-                    if countstar>maxstar:#get the index where the window with max exact matching starts,and store the max number of stars
+                        if countstar>maxstar:#get the index where the window with max exact matching starts,and store the max number of stars
+                            maxstar=countstar
+                            oldmaxindex=maxindex
+                            maxindex=i
 
-                        maxstar=countstar
-                        oldmaxindex=maxindex
-                        maxindex=i
+                        if countnuc>maxnuc:
+                            maxnuc=countnuc
 
-                    if countnuc>maxnuc:
-                        maxnuc=countnuc
+                        maxnuctemp=0
+                        for k in range (0,len(starlist)):#move in number of windows, where the number of stars in a given window, at specific position is stored. the index of the list is the position number in the prec
+                        #in case we have more than one window with maximum stars, we chooe the one with more nucleotides
+                            if maxstar==starlist[k]:#check all the positions with maximum number of stars
+                                if nuclist[k]>maxnuctemp:#get the max number of nuc, in the max star position
+                                    startindex=k
+                                    maxnuctemp=nuclist[k]
 
-                    maxnuctemp=0
-                    for k in range (0,len(starlist)):#move in number of windows, where the number of stars in a given window, at specific position is stored. the index of the list is the position number in the prec
-                    #in case we have more than one window with maximum stars, we chooe the one with more nucleotides
-                        if maxstar==starlist[k]:#check all the positions with maximum number of stars
-                            if nuclist[k]>maxnuctemp:#get the max number of nuc, in the max star position
-                                startindex=k
-                                maxnuctemp=nuclist[k]
+                    updatematfile=open(matfile,'a')
+                    updatemapfile=open(mapfile,'a')
+                    predictedspos=startindex
+                    predictedepos=startindex+len(originalmature)-1
+                    predictedtofoldfile=directory+'temptofold.fa'
+                    tempredictedtofold=open(predictedtofoldfile,'w')
+                    tempredictedtofold.write(">"+originalID+"\n"+originalseq+"\n")
+                    tempredictedtofold.close()
+                    tempredictfold=str(directory+'tempfold.fa')
 
-                updatematfile=open(matfile,'a')
-                updatemapfile=open(mapfile,'a')
-                predictedspos=startindex
-                predictedepos=startindex+len(originalmature)-1
-                predictedtofoldfile=directory+'temptofold.fa'
-                tempredictedtofold=open(predictedtofoldfile,'w')
-                tempredictedtofold.write(">"+originalID+"\n"+originalseq+"\n")
-                tempredictedtofold.close()
-                tempredictfold=str(directory+'tempfold.fa')
+                    foldnomat(predictedtofoldfile,tempredictfold)
+                    finalpredspos,finalpredepos=readfoldpredict(tempredictfold,predictedspos,predictedepos)
 
-                foldnomat(predictedtofoldfile,tempredictfold)
-                finalpredspos,finalpredepos=readfoldpredict(tempredictfold,predictedspos,predictedepos)
-
-                if finalpredspos!=-1:
-                    predictedmat=originalseq[finalpredspos:finalpredepos]
-                    updatematfile.write(">"+newmatID+"\n"+predictedmat+"\n")
-                    newmatIDsplit=newmatID.split()
-                    famsplit=precdescrip.split()
-                    tempfamname=str(famsplit[0])
-                    famname=tempfamname[tempfamname.find('-')+1:]
-                    pos=str(finalpredspos)+".."+str(finalpredepos-1)#to remove the plus added before (in the readfold function) we did that there to make it included when substringing
-                    updatemapfile.write(filename+" "+famname+" "+ famsplit[1]+" "+famsplit[0]+" "+newmatIDsplit[1]+" "+pos+" "+newmatIDsplit[0]+"\n")
-                elif finalpredspos==-1:
-                    famsplit=precdescrip.split()
-                    log.debug(["broken",famsplit[1]])
-                    if famsplit[1] not in listremovedbroken:
-                        listremovedbroken.append(famsplit[1].strip())
-        return listremovedbroken,listremovedscore
+                    if finalpredspos!=-1:
+                        predictedmat=originalseq[finalpredspos:finalpredepos]
+                        updatematfile.write(">"+newmatID+"\n"+predictedmat+"\n")
+                        newmatIDsplit=newmatID.split()
+                        famsplit=precdescrip.split()
+                        tempfamname=str(famsplit[0])
+                        famname=tempfamname[tempfamname.find('-')+1:]
+                        pos=str(finalpredspos)+".."+str(finalpredepos-1)#to remove the plus added before (in the readfold function) we did that there to make it included when substringing
+                        updatemapfile.write(filename+" "+famname+" "+ famsplit[1]+" "+famsplit[0]+" "+newmatIDsplit[1]+" "+pos+" "+newmatIDsplit[0]+"\n")
+                    elif finalpredspos==-1:
+                        famsplit=precdescrip.split()
+                        log.debug(["broken",famsplit[1]])
+                        if famsplit[1] not in listremovedbroken:
+                            listremovedbroken.append(famsplit[1].strip())
+                else:
+                    log.debug(["Sequence lot of Ns",precdescrip.split()[1]])
+                    if precdescrip.split()[1] not in listremovedcomposition:
+                        listremovedcomposition.append(precdescrip.split()[1].strip())                                
+        return listremovedbroken,listremovedscore,listremovedcomposition
 
     except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
@@ -2401,7 +2407,7 @@ def predict(align,matId,newmatID,matfile,filename,precdescrip,mapfile,directory,
         log.error(logid+''.join(tbe.format()))
 
 
-def checknomat(precfile,mapfile,matfile,directory,precfilename,listremovedbroken,listremovedscore,nomats,listnomat):
+def checknomat(precfile,mapfile,matfile,directory,precfilename,listremovedbroken,listremovedscore,listremovedN,nomats,listnomat):
     logid = scriptname+'.checknomat: '
     try:
         flagnomatexists=False
@@ -2499,7 +2505,7 @@ def checknomat(precfile,mapfile,matfile,directory,precfilename,listremovedbroken
                     newmatID=prectempsplit[0]+"-mat "+mattempsplit[1]+"/"+prectempsplit[1]+" "+prectempsplit[2]+" "+prectempsplit[3]
                     filename=getfilename(precfile)
 
-                    listremovedbroken,listremovedscore=predict(tempoutfilepredict,matId,newmatID,matfile,filename,prec.description,mapfile,directory,listremovedbroken,listremovedscore)
+                    listremovedbroken,listremovedscore,listremovedN=predict(tempoutfilepredict,matId,newmatID,matfile,filename,prec.description,mapfile,directory,listremovedbroken,listremovedscore,listremovedN)
                     stktemptopredict=tempoutfilepredict+".stk"
                     os.remove(str(stktemptopredict))
 
@@ -2512,14 +2518,14 @@ def checknomat(precfile,mapfile,matfile,directory,precfilename,listremovedbroken
         elif countnomat>0 and len(matIDs)==0:
             flagnomatexists=True
             nomats=-1
-            return flagnomatexists,nomats,listremovedbroken,listremovedscore,listnomat
+            return flagnomatexists,nomats,listremovedbroken,listremovedscore,listremovedN,listnomat
         elif countnomat<=0:
             log.debug("do the normal procedure")
             #flip here
             nomats=0
             flagnomatexists=False
             log.debug("all precursors has mature, at least one")
-        return flagnomatexists,nomats,listremovedbroken,listremovedscore,listnomat
+        return flagnomatexists,nomats,listremovedbroken,listremovedscore,listremovedN,listnomat
     except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
@@ -3051,6 +3057,7 @@ def sublist(queue, configurer, level, filename, args):
         listofboth=[]#add the id, that shouldn't be added to the new file
         listremovedbroken=[]
         listremovedscore=[]
+        listremovedN=[]
         listofmirstar=[]
         listnomat=[]
         list2mat=[]
@@ -3176,14 +3183,14 @@ def sublist(queue, configurer, level, filename, args):
             log.debug(logid+"The file "+filename.strip()+" already processed, will be done again")
             os.remove(outdir+'nomat-'+filename+'.fa')
 
-        flagnomatexists,nomats,listremovedbroken,listremovedscore,listnomat=checknomat(filen,mapfile,matfile,outdir,filename,listremovedbroken,listremovedscore,nomats,listnomat)
+        flagnomatexists,nomats,listremovedbroken,listremovedscore,listremovedN,listnomat=checknomat(filen,mapfile,matfile,outdir,filename,listremovedbroken,listremovedscore,listremovedN,nomats,listnomat)
 
         if flagnomatexists and nomats!=-1:
             log.debug(logid+"flagnomatexists"+str(flagnomatexists)+';'+str(nomats))
             if os.path.isfile(outdir+filename.strip()+"-new.fa"):
                 os.remove(outdir+filename.strip()+"-new.fa")
 
-            listnomatremoved=listremovedbroken+listremovedscore
+            listnomatremoved=listremovedbroken+listremovedscore+listremovedN
             log.debug(logid+str(["all removed",listnomatremoved]))
 
             if len(listnomatremoved)>0:
@@ -3192,7 +3199,7 @@ def sublist(queue, configurer, level, filename, args):
                 for record in SeqIO.parse(fl, 'fasta'):
                     tempdes=record.description
                     tempdeslst=record.description.split()
-                    if tempdeslst[1].strip() not in listremovedscore and tempdeslst[1].strip() not in listremovedbroken:# and tempdeslst[1].strip() not in lst2mat:
+                    if tempdeslst[1].strip() not in listremovedscore and tempdeslst[1].strip() not in listremovedbroken and tempdeslst[1].strip() not in listremovedN:# and tempdeslst[1].strip() not in lst2mat:
                         newprecfile=open(outdir+filename+"-new.fa",'a')
                         newprecfile.write(">"+str(tempdes)+"\n"+str(record.seq)+"\n")
                         newprecfile.close()
@@ -3249,7 +3256,8 @@ def sublist(queue, configurer, level, filename, args):
 
         listnomatbroken=listremovedbroken
         listnomatscore=listremovedscore
-
+        listnomatN = listremovedN
+        
         if len(list2mat)>0:
             log.debug(logid+"list2mat: "+str(list2mat))
             for i in range(0,len(list2mat),3):
@@ -4041,7 +4049,7 @@ def sublist(queue, configurer, level, filename, args):
                 summaryfile.write("#Precursors without annotated mature; Successfully predicted mature---------------------------\n")
                 tempcountsucnomat=0
                 for k in range(0,len(listnomat)):
-                    if listnomat[k] not in listnomatbroken and listnomat[k] not in listnomatscore:
+                    if listnomat[k] not in listnomatbroken and listnomat[k] not in listnomatscore and listnomat[k] not in listnomatN:
                         tempcountsucnomat=tempcountsucnomat+1
                         summaryfile.write(str(listnomat[k].strip())+"\n")
 
@@ -4069,7 +4077,7 @@ def sublist(queue, configurer, level, filename, args):
                     summaryfile.write("--->NO Precursors without annotated mature; no similar mature\n")
 
             else:
-                summaryfile.write("--->All precurssors have annotated matures\n")
+                summaryfile.write("--->All precursors have annotated matures\n")
 
             summaryfile.write("\n")
             summaryfile.write("---------------------------Original precursors totally removed ----------------------------\n")
@@ -4079,10 +4087,20 @@ def sublist(queue, configurer, level, filename, args):
                     if i%2==0:
                         tempsplit=listofboth[i].split()
                         summaryfile.write(str(tempsplit[1].strip())+"\n")
-
+            elif len(listnomatN)>0:
+                for j in range(0, len(listnomatN)):
+                    summaryfile.write(str(listnomatN[j].strip()) + "\n")
             else:
                 summaryfile.write("---> NO Original precursors totally removed ----------------------------\n")
-
+            
+            summaryfile.write("\n")
+            summaryfile.write("#Precursors with high N content---------------------------\n")
+            if len(listnomatN)>0:
+                for j in range(0, len(listnomatN)):
+                    summaryfile.write(str(listnomatN[j].strip()) + "\n")
+            else:
+                summaryfile.write("---> All precursors reported valid nucleotide composition with N content > 60 % ----------------------------\n")
+            
             summaryfile.write("\n")
             summaryfile.write("---------------------------Precursors without given genome file(s)----------------------------\n")
 
@@ -4106,11 +4124,11 @@ def sublist(queue, configurer, level, filename, args):
 
         #Total
         Processed=(len(listofold)/2)+(len(list2mat)/3)+(len(listofoldloop)/2)+(len(listofnew)/2)+(len(listofnewloop)/2)#+len(listnomat)
-        Removed=len(listofboth)/2
+        Removed=(len(listofboth)/2 + len(listnomatN))
         TotalnumberofSequences=Processed+Removed
         #no mats/predicted-no prediction
         predicted=tempcountsucnomat
-        noprediction=len(listnomat)-tempcountsucnomat
+        noprediction=len(listnomat)-tempcountsucnomat-len(listnomatN)
 
         #Corrected/notcorrected
         flippednotcorrected=int((len(listofnew)/2))+int((len(listofnewloop)/2))-int(countcorrected)
@@ -4277,7 +4295,7 @@ def sublist(queue, configurer, level, filename, args):
             summaryfile.write("*Number of flipped(changed) precursors with bad positioned matures= "+str(int((len(listofnewloop)/2)))+"\n")
             summaryfile.write("*Number of removed precursors= "+str(int(len(listofboth)/2))+"\n")
             summaryfile.write("*Number of precursors without a given matures= "+str(int(len(listnomat)))+"\n")
-            summaryfile.write("*Number of precursors with successfully predicted matures= "+str(int(len(listnomat)-len(listremovedbroken)-len(listremovedscore)))+"\n")
+            summaryfile.write("*Number of precursors with successfully predicted matures= "+str(int(len(listnomat)-len(listremovedbroken)-len(listremovedscore)-len(listremovedN)))+"\n")
             summaryfile.write("*Number of precursors without a given genome file= "+str(int(len(listnogenomes)))+"\n")
             summaryfile.write("*Number of precursors not found in their given genomes= "+str(int(len(listnotingenome)))+"\n")
             summaryfile.write("---------------------------Numbers Used For The Graph----------------------------\n")
@@ -4315,7 +4333,7 @@ def sublist(queue, configurer, level, filename, args):
 
         listsuccpred=[]
         for k in range(0,len(listnomat)):
-            if listnomat[k] not in listnomatbroken and listnomat[k] not in listnomatscore:
+            if listnomat[k] not in listnomatbroken and listnomat[k] not in listnomatscore and listnomat[k] not in listnomatN:
                 listsuccpred.append(str(listnomat[k].strip()))
 
         listremovedjson=[]
@@ -4323,6 +4341,8 @@ def sublist(queue, configurer, level, filename, args):
             if i%2==0:
                 tempsplit=listofboth[i].split()
                 listremovedjson.append(str(tempsplit[1].strip()))
+        for i in range(0,len(listnomatN)):
+            listremovedjson.append(listnomatN[i].strip())
 
         data = {
             "Processed":int(Processed),
@@ -4330,7 +4350,7 @@ def sublist(queue, configurer, level, filename, args):
                 "Number":int(len(listremovedjson)),
                 "IDs":listremovedjson,
             },
-            "Remained precursors":int((len(listofold)/2)+(len(list2mat)/3)),
+            "Remained precursors":int((len(listofold)/2)+(len(list2mat)/3)-len(listnomatN)),
             "Remained precursors with bad positioned matures":{
                 "Number":int(len(listofoldloopjson)),#int((len(listofoldloop)/2)),
                 "IDs":listofoldloopjson,
@@ -4370,6 +4390,10 @@ def sublist(queue, configurer, level, filename, args):
             "Precursors without annotated and without predicted mature":{
                 "Number":int(len(listnomatscore)),
                 "IDs":listnomatscore,
+            },
+            "Precursors with high N content":{
+                "Number": int(len(listnomatN)),
+                "IDs": listnomatN,
             },
             "Precursors without a given genome":{
                 "Number":int(len(listnogenomes)),
@@ -4421,6 +4445,7 @@ def sublist(queue, configurer, level, filename, args):
         del listofboth[:]#add the id, that shouldn't be added to the new file
         del listremovedbroken[:]
         del listremovedscore[:]
+        del listremovedN[:]
         del listnomat[:]
         del list2mat[:]
         del listmatcoor[:]
@@ -4429,7 +4454,7 @@ def sublist(queue, configurer, level, filename, args):
 
         familyfileres.close()
         log.debug("done")
-        log.debug([listofold,listofnew,listofnewloop,listofoldloop,listremovedbroken,listremovedscore,listofmirstar])
+        log.debug([listofold,listofnew,listofnewloop,listofoldloop,listremovedbroken,listremovedscore,listremovedN,listofmirstar])
         log.debug(list2mat)
         if os.path.isfile(outdir+filename.strip()+"-res.fa"):
             os.popen("rm "+outdir+filename.strip()+"-res.fa")
