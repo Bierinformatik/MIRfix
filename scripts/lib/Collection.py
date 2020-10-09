@@ -547,6 +547,9 @@ def check_borders (value,limitlen,mode):
 def define_best_pair(pairs, distances_loop, startprecursor,
                      endprecursor, precursorlen, flanking, longseq):
     all_distances_sorted = sorted(distances_loop, key=itemgetter(-1))
+    coor1 = None
+    coor2 = None
+    correctfinalseq = None
     for i in range(len(all_distances_sorted)):
         if (all_distances_sorted[i][1][0][0] in range(startprecursor, endprecursor + 1)
                 and all_distances_sorted[i][1][0][1] in range(startprecursor, endprecursor + 1)
