@@ -1183,8 +1183,16 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                             listoldstatus.append(str(miroriencorr))
 
                     done=True
+                if done: #CAVH: Check energies for both 
+                    if oldscore > -10 and newscore > -10:
+                        log.debug("Both sequence energies are really high for a miRNA")
+                        listofboth.append(precid)
+                        listofboth.append(oldprecseq)
+                        checkenergy = False
+                    else:
+                        checkenergy = True
 
-                if done:
+                if done and checkenergy:
                     if oldbroken and newbroken:
                         log.debug("remove old and no new")
                         listofboth.append(precid)
