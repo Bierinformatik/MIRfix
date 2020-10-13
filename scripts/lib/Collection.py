@@ -621,6 +621,30 @@ def countNSeq(sequence):
     totalNseq = (float(totaln) / float(totalseq)) * 100
     return totalNseq, totaln, totalseq
 
+def dofold_precursor(sequence):
+    md = RNA.md()
+    md.dangles = 2 #int(sys.argv[10]) if sys.argv[10] else 3   JF: DO NOT CHANGE
+    md.noLP=1
+    fc = RNA.fold_compound(str(sequence), md)
+    (oldstruct,oldscore) = fc.mfe()
+    return (oldstruct, oldscore)
+
+def measure_loop(startmat, endmat, startmatstar, endmatstar):
+    if startmatstar > endmat and (startmatstar != -1) and (endmat != -1):
+        loopsize = abs(startmatstar - endmat)
+    elif startmatstar < endmat and (startmatstar != -1) and (endmat != -1):
+        loopsize = abs(endmatstar - startmat)
+    return loopsize
+
+def evaluate_final_hairpin(precursor, startmir, endmir, startmirstart, endmirstart, reference):
+    #Get the MFE of the candidate:
+    (structure, mfe) = dofold_precursor(precursor)
+    #Size of loop region
+    loop_size = measure_loop(startmir, endmir, startmirstart, endmirstart)
+    #Size of final precursor
+    length_precursor = len(str(precursor))
+    return (structure, mfe, loop_size, length_precursor) 
+
 #Utils
 def removekey(d, key):
     logid = scriptname+'.removekey: '
