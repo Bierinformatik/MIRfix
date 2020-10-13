@@ -1183,7 +1183,7 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                             listoldstatus.append(str(miroriencorr))
 
                     done=True
-                if done: #CAVH: Check energies for both 
+                if done: #CAVH: Check energies for both
                     if oldscore > -10 and newscore > -10:
                         log.debug("Both sequence energies are really high for a miRNA")
                         listofboth.append(precid)
@@ -3665,10 +3665,8 @@ def sublist(queue, configurer, level, filename, args):
                                                  userflanking)
 
                     if coortemp1 == None or coortemp2 == None:
-                        #sys.exit(0)
                         log.error(logid+'Not possible to locate miR or miR* in ' + curmatID)
-                        exit()
-                        
+
                     if coortemp2<coortemp1:
                         tempseqex=curmatseq[:]
                         curmatseq=curmatstar[:]
@@ -3723,7 +3721,7 @@ def sublist(queue, configurer, level, filename, args):
                     #    loopsize = abs(startmatstar - endmat)
                     #elif startmatstar<endmat and (startmatstar != -1) and (endmat != -1):
                     #    loopsize = abs(endmatstar - startmat)
-                    
+
                     if mfe > -10:
                         startmat=0
                         endmat=0
@@ -3778,7 +3776,7 @@ def sublist(queue, configurer, level, filename, args):
                         endmatstar=0
                         listremovenoloop.append(resprecid)
                         break
-                    
+
                     if star and nstar and startmatstar!=-1 and endmatstar!=-1 and startmatstar>endmat and loopsize > 1:
                         list1matcoor.append(curmatID.strip())#mat original
                         list1matcoor.append(curmatsplit[1].strip())#matstarID
@@ -3808,8 +3806,8 @@ def sublist(queue, configurer, level, filename, args):
                         startmatstar=0
                         endmatstar=0
                         break
-                                       
-                    # Here is not possible to calculate the loop 
+
+                    # Here is not possible to calculate the loop
                     elif (not star and nstar) or startmatstar==-1 or endmatstar==-1:
                         startmat=int(mat1seq.find(curmatseq))
                         endmat=(startmat+len(curmatseq))-1
@@ -4201,7 +4199,7 @@ def sublist(queue, configurer, level, filename, args):
                     summaryfile.write(str(listnomatN[j].strip()) + "\n")
             else:
                 summaryfile.write("---> All precursors reported valid nucleotide composition with N content > 60 % ----------------------------\n")
-            
+
             summaryfile.write("\n")
             summaryfile.write("# Precursors with high MFE---------------------------\n")
             if len(listhighmfe)>0:
@@ -4220,7 +4218,7 @@ def sublist(queue, configurer, level, filename, args):
 
             summaryfile.write("\n")
 
-            
+
             summaryfile.write("---------------------------Precursors without given genome file(s)----------------------------\n")
 
             if len(listnogenomes)>0:
