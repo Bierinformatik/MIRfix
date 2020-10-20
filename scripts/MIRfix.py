@@ -3034,7 +3034,6 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
 def sublist(queue, configurer, level, filename, args):
     logid = scriptname+'.sublist: '
     configurer(queue, level)
-    print('SUB: '+str(log)+' '+str(logging))
     log.debug(logid+'Starting to process '+str(filename))
     try:
         filesdir=str(args.famdir)#dir for families
