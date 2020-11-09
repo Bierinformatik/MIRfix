@@ -1973,7 +1973,7 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                             listofboth.append(precid)
                             listofboth.append(oldprecseq)
 
-                    if (newbroken==False and newncounts>0 and newscore<=-10.00):
+                    elif (newbroken==False and newncounts>0 and newscore<=-10.00):
                         splitgoodprec=precid.split()
                         listgoodnew.append(str(splitgoodprec[0]).strip())
                         listgoodnew.append(str(splitgoodprec[1]).strip())
@@ -2093,7 +2093,7 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
             mirstar=precursor[mirstarspos:mirstarepos+1]
             mirstar= mirstar.replace("T","U")#here it is minus because we are in the 3p arm, the sposstar is actually the last nucleotide in the mir* which is the firt one folding to mir
             log.debug(["get mirstar here 20",mirstar,mirstarspos,orien])
-            if len(mirstar) <= 20: #CAVH
+            if len(mirstar) < 20: #CAVH
                 log.debug("no predicted mir*")
                 return "",-1,-1,'p'
             else:
