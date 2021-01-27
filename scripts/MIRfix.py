@@ -1,44 +1,36 @@
 #!/usr/bin/env python3
 
-##import modules
+# import modules
 import os
 import argparse
-#import operator
-import math
 import sys
 import re
-import inspect
 import shlex
 import multiprocessing
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
 import json
-import gzip
 import traceback as tb
 from distutils.spawn import find_executable
-
-##import own modules
-from lib.Collection import *
-from lib.logger import makelogdir, setup_multiprocess_logger
-# Create log dir
-makelogdir('logs')
-# Define loggers
-global scriptname, streamlog, log           # global to ensure that later manipulation of loglevel is possible
-scriptname=os.path.basename(__file__)
-
-##import Bio modules
+# import Bio modules
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio import AlignIO
 from Bio.Align.Applications import ClustalwCommandline
+# Logging
+import logging
+from lib.logger import makelogdir, makelogfile, listener_process, listener_configurer, worker_configurer
+# load own modules
+from lib.Collection import *
 
-##import ViennaRNA
-import RNA
 
-def getindex(sequence,specie,precID,precdesc,listnogenomes,listnotingenome,templong):#get the index of the original sequence in its genome
+log = logging.getLogger(__name__)  # use module name
+# matplotlib.use('Agg')
+scriptname = os.path.basename(__file__).replace('.py', '')
+
+
+def getindex(sequence, specie, precID, precdesc, listnogenomes, listnotingenome, templong, args):#get the index of the original sequence in its genome
     logid = scriptname+'.getindex: '
     try:
         specieitem=specie.split()
@@ -62,10 +54,10 @@ def getindex(sequence,specie,precID,precdesc,listnogenomes,listnotingenome,templ
             for gen in listofgenomes:
                 filer=openfile(gen)
                 fread = SeqIO.parse(filer,"fasta")
+                rep_str  = re.compile("T", re.IGNORECASE)  # replacement for mixed, now we replace all T with U in case T and U are in string
                 for i in fread:
-                    mixed=False
                     if "U" in str(i.seq).upper() and  "T" in str(i.seq).upper() :
-                        mixed=True
+                        i.seq=Seq(rep_str.sub("U",str(i.seq)))
                     precind = None
                     precind = str(i.seq).find(sequence)
 
@@ -94,42 +86,39 @@ def getindex(sequence,specie,precID,precdesc,listnogenomes,listnotingenome,templ
                         return returnlst,listnogenomes,listnotingenome,templong,minusstrand #minus strand
 
                     else:       # We search for the reverse complement now
-                        #precind = str(i.seq).find(str(Seq(sequence).reverse_complement()))
-                        #if "U" in str(i.seq).upper() and  "T" in str(i.seq).upper() :
-                        if not mixed:
-                            precind =  str((i.seq).reverse_complement()).find(sequence) #minus strand
-                            if precind > 0:
-                                log.debug(["in minus genome",precID])
-                                flagseq=1
-                                #gseq=str(i.seq)
-                                gseq=str((i.seq).reverse_complement()) #minus strand
-                                cutlongbefore=250
-                                cutlongafter=250
-                                beforeseq=len(gseq[:precind])
-                                afterseq=len(gseq[precind+len(sequence):])
+                        precind =  str((i.seq).reverse_complement()).find(sequence) #minus strand
+                        if precind > 0:
+                            log.debug(["in minus genome",precID])
+                            flagseq=1
+                            #gseq=str(i.seq)
+                            gseq=str((i.seq).reverse_complement()) #minus strand
+                            cutlongbefore=250
+                            cutlongafter=250
+                            beforeseq=len(gseq[:precind])
+                            afterseq=len(gseq[precind+len(sequence):])
 
-                                if beforeseq<cutlongbefore:
-                                    cutlongbefore=beforeseq
+                            if beforeseq<cutlongbefore:
+                                cutlongbefore=beforeseq
 
-                                if afterseq<cutlongafter:
-                                    cutlongafter=afterseq
+                            if afterseq<cutlongafter:
+                                cutlongafter=afterseq
 
-                                #longseq=str(Seq(gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]).reverse_complement())  # we now search for the reverse complement and return this
-                                longseq=str(gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]) #minus strand
-                                templong.append(precID.strip())
-                                templong.append(str(longseq))
-                                returnlst.append(precind)
-                                returnlst.append(str(i.id))
-                                returnlst.append(str(gen))
-                                minusstrand=True #minus strand
-                                return returnlst,listnogenomes,listnotingenome,templong,minusstrand #minus strand
+                            #longseq=str(Seq(gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]).reverse_complement())  # we now search for the reverse complement and return this
+                            longseq=str(gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]) #minus strand
+                            templong.append(precID.strip())
+                            templong.append(str(longseq))
+                            returnlst.append(precind)
+                            returnlst.append(str(i.id))
+                            returnlst.append(str(gen))
+                            minusstrand=True #minus strand
+                            return returnlst,listnogenomes,listnotingenome,templong,minusstrand #minus strand
 
         if flagseq==0 and flaggenome==1:
             listnotingenome.append(precID)
             returnlst=[]
             return returnlst,listnogenomes,listnotingenome,templong,minusstrand
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -137,7 +126,7 @@ def getindex(sequence,specie,precID,precdesc,listnogenomes,listnotingenome,templ
         log.error(logid+''.join(tbe.format()))
 
 
-def getindex2mat(sequence,specie,precID,precdesc,listnogenomes,listnotingenome):#get the index of the original sequence in its genome
+def getindex2mat(sequence, specie, precID, precdesc, listnogenomes, listnotingenome, args):#get the index of the original sequence in its genome
     logid = scriptname+'.getindex2mat: '
     try:
         specieitem=specie.split()
@@ -161,19 +150,22 @@ def getindex2mat(sequence,specie,precID,precdesc,listnogenomes,listnotingenome):
             for gen in listofgenomes:
                 filer=openfile(gen)
                 fread = SeqIO.parse(filer,"fasta")
+                #precind = None
+                #precind = str(i.seq).find(sequence)
+                rep_str  = re.compile("T", re.IGNORECASE)
                 for i in fread:
-                    mixed=False
                     if "U" in str(i.seq).upper() and  "T" in str(i.seq).upper() :
-                        mixed=True
+                        i.seq=Seq(rep_str.sub("U",str(i.seq)))
                     precind = None
                     precind = str(i.seq).find(sequence)
-
                     if precind > 0:
                         log.debug(["in genome",precID])
                         flagseq=1
                         gseq=str(i.seq)
-                        cutlongbefore=100
-                        cutlongafter=100
+                        #cutlongbefore=100
+                        #cutlongafter=100
+                        cutlongbefore=250 #Not 250?
+                        cutlongafter=250 #Not 250?
                         beforeseq=len(gseq[:precind])
                         afterseq=len(gseq[precind+len(sequence):])
 
@@ -186,34 +178,34 @@ def getindex2mat(sequence,specie,precID,precdesc,listnogenomes,listnotingenome):
                         longseq=gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]
                         return (str(longseq)),listnogenomes,listnotingenome
                     else:       # We search for the reverse complement now
-                        #precind = str(i.seq).find(str(Seq(sequence).reverse_complement()))
-                        if not mixed:
-                            precind =  str((i.seq).reverse_complement()).find(sequence) #minus strand
-                            if precind > 0:
-                                log.debug(["in minus genome",precID])
-                                flagseq=1
-                                #gseq=str(i.seq)
-                                gseq=str((i.seq).reverse_complement()) #minus strand
-                                cutlongbefore=100
-                                cutlongafter=100
-                                beforeseq=len(gseq[:precind])
-                                afterseq=len(gseq[precind+len(sequence):])
+                        precind =  str((i.seq).reverse_complement()).find(sequence) #minus strand
+                        if precind > 0:
+                            log.debug(["in minus genome",precID])
+                            flagseq=1
+                            #gseq=str(i.seq)
+                            gseq=str((i.seq).reverse_complement()) #minus strand
+                            #cutlongbefore=100
+                            #cutlongafter=100
+                            cutlongbefore=250 #Not 250?
+                            cutlongafter=250 #Not 250?
+                            beforeseq=len(gseq[:precind])
+                            afterseq=len(gseq[precind+len(sequence):])
 
-                                if beforeseq<cutlongbefore:
-                                    cutlongbefore=beforeseq
+                            if beforeseq<cutlongbefore:
+                                cutlongbefore=beforeseq
 
-                                if afterseq<cutlongafter:
-                                    cutlongafter=afterseq
+                            if afterseq<cutlongafter:
+                                cutlongafter=afterseq
 
-                                #longseq=str(Seq(gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]).reverse_complement())  # we now search for the reverse complement and return this
-                                longseq=str(gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]) #minus strand
-                                return (str(longseq)),listnogenomes,listnotingenome
+                            #longseq=str(Seq(gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]).reverse_complement())  # we now search for the reverse complement and return this
+                            longseq=str(gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]) #minus strand
+                            return (str(longseq)),listnogenomes,listnotingenome
 
         if flagseq==0 and flaggenome==1:
             listnotingenome.append(precID)
             return "",listnogenomes,listnotingenome
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -221,7 +213,7 @@ def getindex2mat(sequence,specie,precID,precdesc,listnogenomes,listnotingenome):
         log.error(logid+''.join(tbe.format()))
 
 
-def flip(filename,filen,outdir,mappingfile,matfile,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,list2mat,listnogenomes,listnotingenome,templong,listgoodnew):#file name is the family name
+def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, list2mat, listnogenomes, listnotingenome, templong, listgoodnew, args):#file name is the family name
     logid = scriptname+'.flip: '
     try:
         item=[]
@@ -247,6 +239,8 @@ def flip(filename,filen,outdir,mappingfile,matfile,listofnew,listofnewloop,listo
                         log.debug(["prec is here",precID])
                         flagprec=1
                         matID=famlinesplit[4].strip()#mature sequence ID
+                        #item=famline.split()
+                        #matID=item[4].strip()#mature sequence ID
                         log.debug(["mat is here",matID])
                         mtf = openfile(matfile)
                         for mat in SeqIO.parse(mtf, "fasta"):#get the corresponding mature sequence and get position
@@ -257,7 +251,7 @@ def flip(filename,filen,outdir,mappingfile,matfile,listofnew,listofnewloop,listo
                                 log.debug(["mat desc is here",matdesc])
                                 matseq=str(mat.seq).strip()
                                 matseq=matseq.replace('T','U')#replace T by U because the RNAfold produces the sequences as U
-                                spos=str(precseq).index(matseq)
+                                spos=str(precseq).find(matseq)
 #                                if not spos:  # again check minus strand
 #                                    spos=str(precseq).find(reverse_complement(Seq(matseq)))
                                 epos=spos+len(matseq)-1
@@ -276,10 +270,10 @@ def flip(filename,filen,outdir,mappingfile,matfile,listofnew,listofnewloop,listo
                 elif xcut<ycut and xcut<=10:#=> 5p and no need to cut, already <=10
                     precseq=precseq
 
-                spos=str(precseq).index(matseq)#spos after cut
-                epos=spos+len(matseq)-1#epos after cut
+                spos=str(precseq).find(matseq)#spos after cut
+                epos=spos+len(matseq)-1 #epos after cut
                 precseq=precseq.replace("U","T")#r
-                returnlst,listnogenomes,listnotingenome,templong,minusstrand=getindex(precseq,specie,precID,precDes,listnogenomes,listnotingenome,templong)# returns 3 values received, the first is the index of the sequence, the ID where this sequence found in the genome and the genome filename
+                returnlst,listnogenomes,listnotingenome,templong,minusstrand=getindex(precseq,specie,precID,precDes,listnogenomes,listnotingenome,templong, args)# returns 3 values received, the first is the index of the sequence, the ID where this sequence found in the genome and the genome filename
 
                 if precID not in listnogenomes and precID not in listnotingenome:
                     listnewold=[]
@@ -354,7 +348,7 @@ def flip(filename,filen,outdir,mappingfile,matfile,listofnew,listofnewloop,listo
 
         return listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listnogenomes,listnotingenome,templong,listgoodnew
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -362,30 +356,6 @@ def flip(filename,filen,outdir,mappingfile,matfile,listofnew,listofnewloop,listo
         log.error(logid+''.join(tbe.format()))
 
 
-def dofold(listnewold,oldid,precseq,newid,newseq):
-    logid = scriptname+'.dofold: '
-    try:
-        md = RNA.md()
-        md.dangles = 2 #int(sys.argv[10]) if sys.argv[10] else 3   JF: DO NOT CHANGE
-        md.noLP=1
-        fc = RNA.fold_compound(str(precseq), md)
-        (oldstruct,oldscore) = fc.mfe()
-        mdn = RNA.md()
-        mdn.dangles = 2 #int(sys.argv[10]) if sys.argv[10] else 3   JF: DO NOT CHANGE
-        mdn.noLP=1
-        fcn = RNA.fold_compound(str(newseq), mdn)
-        (newstruct,newscore)= fcn.mfe()
-        log.debug(["folding is here:",oldstruct,oldscore])
-        log.debug(["folding is here:",newstruct,newscore])
-        listnewold.extend((oldid,str(precseq),oldstruct,oldscore,newid,str(newseq),newstruct,newscore))
-        return listnewold
-
-    except Exception as err:
-        exc_type, exc_value, exc_tb = sys.exc_info()
-        tbe = tb.TracebackException(
-            exc_type, exc_value, exc_tb,
-        )
-        log.error(logid+''.join(tbe.format()))
 
 
 def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos,matdesc,matseq,outdir,oldparts,finaloldcomp,precDes,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listgoodnew):
@@ -636,8 +606,8 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                         newparts=parts
                     for i in range(0,len(partslist)):
                         if i==0 and partslist[0]!=-1:#if the partslist starting from position zero, i.e. the first part starts at position zero
-                            loopstart=hairpin.rindex('(',0,int(partslist[0])+1)+1
-                            loopend=hairpin.index(')',0,int(partslist[0])+1)-1
+                            loopstart=hairpin.rfind('(',0,int(partslist[0])+1)+1
+                            loopend=hairpin.find(')',0,int(partslist[0])+1)-1
                             if (((x in range(0,loopstart)) and (y in range(0,loopstart))) or ((x  in range(loopend+1,int(partslist[0])+1)) and (y in range(loopend+1,int(partslist[0])+1)))) and stat=="old":
                                 oldbroken=False
                                 oldloop=False
@@ -725,8 +695,8 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
 
 
                         if i==len(partslist)-1 and partslist[i]!=-1:
-                            loopstart=hairpin.rindex('(',int(partslist[i])+1)+1
-                            loopend=hairpin.index(')',int(partslist[i])+1)-1
+                            loopstart=hairpin.rfind('(',int(partslist[i])+1)+1
+                            loopend=hairpin.find(')',int(partslist[i])+1)-1
 
                             if (((x in range(int(partslist[i]),loopstart)) and (y in range(int(partslist[i]),loopstart) )) or ((x in range(loopend+1,len(hairpin))) and (y in range(loopend+1,len(hairpin))))) and stat=="old":
                                 oldncounts=int(hairpin[int(partslist[i]):].count("("))+int(hairpin[int(partslist[i]):].count(")"))
@@ -812,8 +782,8 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                                 currcounts=int(hairpin[int(partslist[i]):].count("("))+int(hairpin[int(partslist[i]):].count(")"))
 
                         if i!=0 and i!=len(partslist)-1 and i%2==0:
-                            loopstart=hairpin.rindex('(',int(partslist[i-1]),int(partslist[i])+1)+1
-                            loopend=hairpin.index(')',int(partslist[i-1]),int(partslist[i])+1)-1
+                            loopstart=hairpin.rfind('(',int(partslist[i-1]),int(partslist[i])+1)+1
+                            loopend=hairpin.find(')',int(partslist[i-1]),int(partslist[i])+1)-1
                             currflag=0
 
                             if (((x in range(int(partslist[i-1]),loopstart)) and (y in range(int(partslist[i-1]),loopstart))) or ((x in range(loopend+1,int(partslist[i])+1)) and (y in range(loopend+1,int(partslist[i])+1)))) and stat=="old":
@@ -1030,6 +1000,12 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
 
                     if len(finalcomp)>0 and stat=="old":
                         currhairpin=hairpin[finalcomp[4]:finalcomp[5]+1]
+                        #CAVH
+                        for i in currhairpin:
+                            if i != ")": #CAVH To detect ')' at the beginning
+                                index = currhairpin.index(i)
+                                currhairpin=currhairpin[index:]
+                                break
                         oldlstlstr=[]
                         oldlstlstl=[]
                         for nuc in range(0,len(currhairpin)):
@@ -1040,6 +1016,12 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
 
                     if len(finalcomp)>0 and stat=="new":
                         currhairpin=hairpin[finalcomp[4]:finalcomp[5]+1]
+                        #CAVH
+                        for i in currhairpin:
+                            if i != ")": #CAVH To detect ')' at the beginning
+                                index = currhairpin.index(i)
+                                currhairpin=currhairpin[index:]
+                                break
                         newlstlstr=[]
                         newlstlstl=[]
                         for nuc in range(0,len(currhairpin)):
@@ -1057,8 +1039,8 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                         finalnewcomp=finalcomp
 
                 if parts==1:
-                    loopstart=hairpin.rindex('(')+1
-                    loopend=hairpin.index(')')-1
+                    loopstart=hairpin.rfind('(')+1
+                    loopend=hairpin.find(')')-1
                     finalcomp1=[]
 
                     if (((x in range(loopstart,loopend+1)) and (y not in list(range(loopstart,loopend+1)))) or ((x not in list(range(loopstart,loopend+1))) and (y in range(loopstart,loopend+1)))) and stat=="old":
@@ -1180,8 +1162,8 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                         newhairpend=-1
                         newncounts=-1
 
-                    log.debug(["old: oldbroken= ",oldbroken,"/oldloop= ",oldloop,"start= ",oldhairpstart,"end= ",oldhairpend,"Counts= ",oldncounts, "old score= ",oldscore,"old parts= ",oldparts])
-                    log.debug(["new: newbroken= ",newbroken,"/newloop= ",newloop,"start= ",newhairpstart,"end= ",newhairpend,"Counts= ",newncounts, "new score= ",newscore,"new parts= ",newparts])
+                    log.debug(["old: oldbroken= ",oldbroken,"/oldloop= ",oldloop,"start= ",oldhairpstart,"end= ",oldhairpend,"Counts= ",oldncounts, "old score= ",oldscore,"old parts= ",oldparts, "old energy", oldscore])
+                    log.debug(["new: newbroken= ",newbroken,"/newloop= ",newloop,"start= ",newhairpstart,"end= ",newhairpend,"Counts= ",newncounts, "new score= ",newscore,"new parts= ",newparts, "new energy", newscore])
                     temcorrectsplit=precid.split()
                     precId=temcorrectsplit[0].strip()
                     precides=temcorrectsplit[1].strip()
@@ -1201,8 +1183,16 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                             listoldstatus.append(str(miroriencorr))
 
                     done=True
+                if done: #CAVH: Check energies for both
+                    if oldscore > -10 and newscore > -10:
+                        log.debug("Both sequence energies are really high for a miRNA")
+                        listofboth.append(precid)
+                        listofboth.append(oldprecseq)
+                        checkenergy = False
+                    else: #At least one of the sequences has < -10 MFE
+                        checkenergy = True
 
-                if done:
+                if done and checkenergy:
                     if oldbroken and newbroken:
                         log.debug("remove old and no new")
                         listofboth.append(precid)
@@ -1983,7 +1973,7 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                             listofboth.append(precid)
                             listofboth.append(oldprecseq)
 
-                    if (newbroken==False and newncounts>0 and newscore<=-10.00):
+                    elif (newbroken==False and newncounts>0 and newscore<=-10.00):
                         splitgoodprec=precid.split()
                         listgoodnew.append(str(splitgoodprec[0]).strip())
                         listgoodnew.append(str(splitgoodprec[1]).strip())
@@ -2034,47 +2024,16 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
 
         return oldlstlstr,oldlstlstl,oldparts,finaloldcomp,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listgoodnew
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
         )
         log.error(logid+''.join(tbe.format()))
-
-
-def comp_5p(ll, lr, sm, ss, precursor, run):
-    logid = scriptname+'.comp_5p: '
-    try:
-        log.debug(['comp5p', ll, lr, sm, ss, precursor, run])
-        if run > 3:
-            return ss-run+1
-        if sm in ll:
-            if any(x in precursor[sm].upper() for x in ['G', 'C']):
-                return ss-run+1
-            if ss in lr :
-                if any(x in precursor[sm].upper() for x in ['A', 'U']) and any(x in precursor[ss].upper() for x in ['G', 'C']):
-                    return ss
-                else:
-                    return comp_5p(ll, lr, sm, ss+1, precursor, run+1)
-            else:
-                return comp_5p(ll, lr, sm, ss+1, precursor, run+1)
-        else:
-            if ss in lr:
-                return ss
-            else:
-                return comp_5p(ll, lr, sm, ss+1, precursor, run+1)
-
-    except Exception as err:
-        exc_type, exc_value, exc_tb = sys.exc_info()
-        tbe = tb.TracebackException(
-            exc_type, exc_value, exc_tb,
-        )
-        log.error(logid+''.join(tbe.format()))
-
-
 
 def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
     logid = scriptname+'.getmirstar: '
+    mirstarepos=0 #CAVH
     try:
         log.debug("get mirstar here 18")
         mirflag=False
@@ -2129,13 +2088,17 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
                 mirstarspos=mirstarspos+(epos-mirstarspos+1)
 
             if mirstarepos>len(precursor)-1:#To avoid mir* end position going outside the precursor
-                mirstarepos=len(precursor)-1
+                mirstarepos=len(precursor)-1 #TODO: what if after reduction mirstar is too short?
             mirstarspos = comp_5p(lstl, lstr, spos, mirstarspos, precursor, 1)  # Comparing 5'ends of mir and mir*
             mirstar=precursor[mirstarspos:mirstarepos+1]
             mirstar= mirstar.replace("T","U")#here it is minus because we are in the 3p arm, the sposstar is actually the last nucleotide in the mir* which is the firt one folding to mir
             log.debug(["get mirstar here 20",mirstar,mirstarspos,orien])
-            mirflag=True
-            return (str(mirstar),int(mirstarspos),int(mirstarepos),str(orien))
+            if len(mirstar) < 20: #CAVH
+                log.debug("no predicted mir*")
+                return "",-1,-1,'p'
+            else:
+                mirflag=True
+                return (str(mirstar),int(mirstarspos),int(mirstarepos),str(orien))
         #break
 
         elif orien=="3p":
@@ -2172,25 +2135,33 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
                             diff=epos-sind1
                             mirstarspos=rev[sind-1]-diff+2
                             break
+
+            if mirstarspos<=0: #CAVH
+                mirstarspos=0 #CAVH
+
             if mirstarepos>=spos:#To avoid overlapping between mir and mir*, this would happen in case the mir is in the loop
                 mirstarspos=mirstarspos-(mirstarepos-spos+1)
                 mirstarepos=mirstarepos-(mirstarepos-spos+1)
 
-            if mirstarspos<=0:
-                mirstarspos=0
+            #if mirstarspos<=0: #CAVH the position is better before last definition
+            #    mirstarspos=0
 
             mirstarspos = comp_5p(lstr, lstl, spos, mirstarspos, precursor, 1)  # Comparing 5'ends of mir and mir*
             mirstar=precursor[mirstarspos:mirstarepos+1]
             mirstar=mirstar.replace("T","U")#here it is minus because we are in the 3p arm, the sposstar is actually the last nucleotide in the mir* which is the firt one folding to mir
             log.debug(["get mirstar here 24",mirstar,mirstarspos,orien])
-            mirflag=True
+            if len(mirstar) <= 20:
+                log.debug("no predicted mir*")
+                return "",-1,-1,'p'
+            else:
+                mirflag=True
             return (str(mirstar),int(mirstarspos),int(mirstarepos),str(orien))
 
         if not mirflag:
             log.debug("no predicted mir*")
             return "",-1,-1,'p'
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -2328,97 +2299,14 @@ def getmirstarbak(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
             log.debug("no predicted mir*")
             return "",-1,-1,'p'
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
         )
         log.error(logid+''.join(tbe.format()))
 
-
-def foldnomat(inputfasta,outputfasta):#fold the new and the old sequences, using temp file every time I get the new sequence from the original
-    logid = scriptname+'.foldnomat: '
-    try:
-        f=os.popen("RNAfold -d3 --noPS --noLP <"+inputfasta)
-        fi=f.read()
-        wr=open(outputfasta,"w")
-        f.close()
-        wr.write(fi)
-        wr.close
-    except Exception as err:
-        exc_type, exc_value, exc_tb = sys.exc_info()
-        tbe = tb.TracebackException(
-            exc_type, exc_value, exc_tb,
-        )
-        log.error(logid+''.join(tbe.format()))
-
-
-def alignTostock(align):
-    logid = scriptname+'.alignTostock: '
-    try:
-        reads=openfile(align)
-        stkfile=align+".stk"
-        writes=open(stkfile,'a')
-        numberlines=0#count lines
-        items=[]
-        listofids=[]
-        maxspaces=0
-        minlen=100000
-        maxlen=0
-        for line in reads:
-            item=line.split()
-            if len(item) > 0 and item[0]!="CLUSTAL" and ("*" not in line):
-                numberlines=numberlines+1
-                listofids.append(item[0])
-                items.append(line.strip())
-                numberofspaces=items[0].count(" ")
-                if maxspaces<numberofspaces:
-                    maxspaces=numberofspaces
-        for i in listofids:
-            s=len(i)
-            if minlen>s:
-                minlen=s
-            if maxlen<s:
-                maxlen=s
-        if maxlen>len('#=GC SS_cons'):
-            maxlen=maxlen
-        if maxlen<=len('#=GC SS_cons'):
-            maxlen=len('#=GC SS_cons')
-
-        numberofblocks=listofids.count(listofids[0])
-        numberofseqs=int(numberlines/numberofblocks)
-        ranges=int(len(items)/2)
-        writes.write('# STOCKHOLM 1.0'+"\n"+"\n")
-        offset=0
-        for i in range (0,numberofseqs):
-            offset=0
-
-            seqitem=items[i].split()
-            seqid=seqitem[0]
-            seq=seqid.strip()+" "*(maxlen-len(seqid)+1)+seqitem[1]
-
-            for k in range(0,numberofblocks-1):
-                offset=offset+numberofseqs
-                item2=items[i+offset].split()
-                seq=seq+item2[1]
-
-            writes.write(seq+"\n")
-        tempitem=seq.split()
-        writes.write('#=GC SS_cons'+" "*(maxlen-len('#=GC SS_cons')+1)+"."*len(tempitem[1])+"\n"+"//")
-        writest=str(writes)
-        writeitem=writest.split("'")
-        writes.close()
-        return str(writeitem[1])
-
-    except Exception as err:
-        exc_type, exc_value, exc_tb = sys.exc_info()
-        tbe = tb.TracebackException(
-            exc_type, exc_value, exc_tb,
-        )
-        log.error(logid+''.join(tbe.format()))
-
-
-def predict(align,matId,newmatID,matfile,filename,precdescrip,mapfile,directory,listremovedbroken,listremovedscore):
+def predict(align,matId,newmatID,matfile,filename,precdescrip,mapfile,directory,listremovedbroken,listremovedscore,listremovedcomposition):
     logid = scriptname+'.predict: '
     try:
         if directory[-1]!="/":# to work in both cases, user puts / at the end of the directory or not
@@ -2451,69 +2339,75 @@ def predict(align,matId,newmatID,matfile,filename,precdescrip,mapfile,directory,
                 maxindexlist=[]
                 dup=[]
                 # the window is taking substring from the aligned mature line with szie of  real mature, and move nuc by nuc on the aligned prec to see how many nucleotides matching
-                for i in range (0,lastindex+1):#moving alon the precurson, and stop at the last index, where after that will be out of range
-                    countnuc=0
-                    countstar=0
-                    itemmature=str(alnmat[i:i+len(originalmature)])#the window with size of the mature sequence, moving along the
+                #CAVH: First evaluate if there is not a high number of Ns in the sequence
+                (proportionN, totalN, totalseq) = countNSeq(originalseq)
+                if proportionN <= 40 and proportionN > -1: #Number based on RNAfold rules, have to be N content <= 40 from the complete seq
+                    for i in range (0,lastindex+1):#moving along the precursor, and stop at the last index, where after that will be out of range
+                        countnuc=0
+                        countstar=0
+                        itemmature=str(alnmat[i:i+len(originalmature)])#the window with size of the mature sequence, moving along the
 
-                    for char in itemmature:#move in the window to check how many nucleotides we have and not gaps
-                        if char in nuc:
-                            countnuc=countnuc+1
-                    nuclist.append(countnuc)#save number of nucleotides and not gaps in each window
+                        for char in itemmature:#move in the window to check how many nucleotides we have and not gaps
+                            if char in nuc:
+                                countnuc=countnuc+1
+                        nuclist.append(countnuc)#save number of nucleotides and not gaps in each window
 
-                    itemseq=alnseq[i:i+len(originalmature)]
-                    for chars in range(0,len(originalmature)):#count the stars in each window (how many exact matching between mature aligned and the prec aligned)
-                        if itemseq[chars].upper()==itemmature[chars].upper():
-                            countstar=countstar+1
-                    starlist.append(countstar)#save the number of stars at each window
+                        itemseq=alnseq[i:i+len(originalmature)]
+                        for chars in range(0,len(originalmature)):#count the stars in each window (how many exact matching between mature aligned and the prec aligned)
+                            if itemseq[chars].upper()==itemmature[chars].upper():
+                                countstar=countstar+1
+                        starlist.append(countstar)#save the number of stars at each window
 
-                    if countstar>maxstar:#get the index where the window with max exact matching starts,and store the max number of stars
+                        if countstar>maxstar:#get the index where the window with max exact matching starts,and store the max number of stars
+                            maxstar=countstar
+                            oldmaxindex=maxindex
+                            maxindex=i
 
-                        maxstar=countstar
-                        oldmaxindex=maxindex
-                        maxindex=i
+                        if countnuc>maxnuc:
+                            maxnuc=countnuc
 
-                    if countnuc>maxnuc:
-                        maxnuc=countnuc
+                        maxnuctemp=0
+                        for k in range (0,len(starlist)):#move in number of windows, where the number of stars in a given window, at specific position is stored. the index of the list is the position number in the prec
+                        #in case we have more than one window with maximum stars, we chooe the one with more nucleotides
+                            if maxstar==starlist[k]:#check all the positions with maximum number of stars
+                                if nuclist[k]>maxnuctemp:#get the max number of nuc, in the max star position
+                                    startindex=k
+                                    maxnuctemp=nuclist[k]
 
-                    maxnuctemp=0
-                    for k in range (0,len(starlist)):#move in number of windows, where the number of stars in a given window, at specific position is stored. the index of the list is the position number in the prec
-                    #in case we have more than one window with maximum stars, we chooe the one with more nucleotides
-                        if maxstar==starlist[k]:#check all the positions with maximum number of stars
-                            if nuclist[k]>maxnuctemp:#get the max number of nuc, in the max star position
-                                startindex=k
-                                maxnuctemp=nuclist[k]
+                    updatematfile=open(matfile,'a')
+                    updatemapfile=open(mapfile,'a')
+                    predictedspos=startindex
+                    predictedepos=startindex+len(originalmature)-1
+                    predictedtofoldfile=directory+'temptofold.fa'
+                    tempredictedtofold=open(predictedtofoldfile,'w')
+                    tempredictedtofold.write(">"+originalID+"\n"+originalseq+"\n")
+                    tempredictedtofold.close()
+                    tempredictfold=str(directory+'tempfold.fa')
 
-                updatematfile=open(matfile,'a')
-                updatemapfile=open(mapfile,'a')
-                predictedspos=startindex
-                predictedepos=startindex+len(originalmature)-1
-                predictedtofoldfile=directory+'temptofold.fa'
-                tempredictedtofold=open(predictedtofoldfile,'w')
-                tempredictedtofold.write(">"+originalID+"\n"+originalseq+"\n")
-                tempredictedtofold.close()
-                tempredictfold=str(directory+'tempfold.fa')
+                    foldnomat(predictedtofoldfile,tempredictfold)
+                    finalpredspos,finalpredepos=readfoldpredict(tempredictfold,predictedspos,predictedepos)
 
-                foldnomat(predictedtofoldfile,tempredictfold)
-                finalpredspos,finalpredepos=readfoldpredict(tempredictfold,predictedspos,predictedepos)
+                    if finalpredspos!=-1:
+                        predictedmat=originalseq[finalpredspos:finalpredepos]
+                        updatematfile.write(">"+newmatID+"\n"+predictedmat+"\n")
+                        newmatIDsplit=newmatID.split()
+                        famsplit=precdescrip.split()
+                        tempfamname=str(famsplit[0])
+                        famname=tempfamname[tempfamname.find('-')+1:]
+                        pos=str(finalpredspos)+".."+str(finalpredepos-1)#to remove the plus added before (in the readfold function) we did that there to make it included when substringing
+                        updatemapfile.write(filename+" "+famname+" "+ famsplit[1]+" "+famsplit[0]+" "+newmatIDsplit[1]+" "+pos+" "+newmatIDsplit[0]+"\n")
+                    elif finalpredspos==-1:
+                        famsplit=precdescrip.split()
+                        log.debug(["broken",famsplit[1]])
+                        if famsplit[1] not in listremovedbroken:
+                            listremovedbroken.append(famsplit[1].strip())
+                else:
+                    log.debug(["Sequence lot of Ns",precdescrip.split()[1]])
+                    if precdescrip.split()[1] not in listremovedcomposition:
+                        listremovedcomposition.append(precdescrip.split()[1].strip())
+        return listremovedbroken,listremovedscore,listremovedcomposition
 
-                if finalpredspos!=-1:
-                    predictedmat=originalseq[finalpredspos:finalpredepos]
-                    updatematfile.write(">"+newmatID+"\n"+predictedmat+"\n")
-                    newmatIDsplit=newmatID.split()
-                    famsplit=precdescrip.split()
-                    tempfamname=str(famsplit[0])
-                    famname=tempfamname[tempfamname.index('-')+1:]
-                    pos=str(finalpredspos)+".."+str(finalpredepos-1)#to remove the plus added before (in the readfold function) we did that there to make it included when substringing
-                    updatemapfile.write(filename+" "+famname+" "+ famsplit[1]+" "+famsplit[0]+" "+newmatIDsplit[1]+" "+pos+" "+newmatIDsplit[0]+"\n")
-                elif finalpredspos==-1:
-                    famsplit=precdescrip.split()
-                    log.debug(["broken",famsplit[1]])
-                    if famsplit[1] not in listremovedbroken:
-                        listremovedbroken.append(famsplit[1].strip())
-        return listremovedbroken,listremovedscore
-
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -2521,7 +2415,7 @@ def predict(align,matId,newmatID,matfile,filename,precdescrip,mapfile,directory,
         log.error(logid+''.join(tbe.format()))
 
 
-def checknomat(precfile,mapfile,matfile,directory,precfilename,listremovedbroken,listremovedscore,nomats,listnomat):
+def checknomat(precfile,mapfile,matfile,directory,precfilename,listremovedbroken,listremovedscore,listremovedN,nomats,listnomat):
     logid = scriptname+'.checknomat: '
     try:
         flagnomatexists=False
@@ -2619,7 +2513,7 @@ def checknomat(precfile,mapfile,matfile,directory,precfilename,listremovedbroken
                     newmatID=prectempsplit[0]+"-mat "+mattempsplit[1]+"/"+prectempsplit[1]+" "+prectempsplit[2]+" "+prectempsplit[3]
                     filename=getfilename(precfile)
 
-                    listremovedbroken,listremovedscore=predict(tempoutfilepredict,matId,newmatID,matfile,filename,prec.description,mapfile,directory,listremovedbroken,listremovedscore)
+                    listremovedbroken,listremovedscore,listremovedN=predict(tempoutfilepredict,matId,newmatID,matfile,filename,prec.description,mapfile,directory,listremovedbroken,listremovedscore,listremovedN)
                     stktemptopredict=tempoutfilepredict+".stk"
                     os.remove(str(stktemptopredict))
 
@@ -2632,36 +2526,15 @@ def checknomat(precfile,mapfile,matfile,directory,precfilename,listremovedbroken
         elif countnomat>0 and len(matIDs)==0:
             flagnomatexists=True
             nomats=-1
-            return flagnomatexists,nomats,listremovedbroken,listremovedscore,listnomat
+            return flagnomatexists,nomats,listremovedbroken,listremovedscore,listremovedN,listnomat
         elif countnomat<=0:
             log.debug("do the normal procedure")
             #flip here
             nomats=0
             flagnomatexists=False
             log.debug("all precursors has mature, at least one")
-        return flagnomatexists,nomats,listremovedbroken,listremovedscore,listnomat
-    except Exception as err:
-        exc_type, exc_value, exc_tb = sys.exc_info()
-        tbe = tb.TracebackException(
-            exc_type, exc_value, exc_tb,
-        )
-        log.error(logid+''.join(tbe.format()))
-
-
-def getfilename(dirfile):#to get the name of the file without directory or extension, in principal was used to get famname
-    logid = scriptname+'.getfilename: '
-    try:
-        if '/' in dirfile and "." in dirfile:
-            dirf=dirfile[dirfile.rindex('/')+1:]
-            filename=dirf[:dirf.rindex('.')]
-        elif '/' in dirfile and "." not in dirfile:
-            filename=dirfile[dirfile.rindex('/')+1:]
-        elif '/' not in dirfile and "." in dirfile:
-            filename=dirfile[:dirfile.rindex('.')]
-        elif '/' not in dirfile and "." not in dirfile:
-            filename=dirfile
-        return str(filename)
-    except Exception as err:
+        return flagnomatexists,nomats,listremovedbroken,listremovedscore,listremovedN,listnomat
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
@@ -2676,13 +2549,13 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
         for line in SeqIO.parse(fofi,"fasta"):
             string=str(line.seq)
             if ((")") or ("(") or (".")) in str(line.seq):#to get where the folding starts, ex1: ACGTtgatagt..((..))(score) ex2: acgtatgat(((.)))(socre)
-                rindex=string.index(")")
-                lindex=string.index("(")
-                pindex=string.index(".")
+                rindex=string.find(")")
+                lindex=string.find("(")
+                pindex=string.find(".")
                 splitindex=min(rindex,lindex,pindex)
                 stall=string[splitindex:]
-                st=stall[0:stall.rindex('(')]
-                hairpin=stall[0:stall.rindex('(')]
+                st=stall[0:stall.rfind('(')]
+                hairpin=stall[0:stall.rfind('(')]
                 precsequence=string[0:splitindex]
                 partslist=[]
                 parts=0
@@ -2754,15 +2627,15 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
                     flagvalid=0 #flag if x and y are valid at least once in the parts in between the first hairpin and last hairpin
                     for i in range(0,len(partslist)):
                         if i==0:
-                            loopstart=hairpin.rindex('(',0,int(partslist[0])+1)+1
-                            loopend=hairpin.index(')',0,int(partslist[0])+1)-1
-                            if (((x in range(0,loopstart)) and (y in range(0,loopstart))) or ((x  in range(loopend+1,int(partslist[0])+1)) and (y in range(loopend+1,int(partslist[0])+1)))):
+                            loopstart=hairpin.rfind('(',0,int(partslist[0])+1)+1
+                            loopend=hairpin.find(')',0,int(partslist[0])+1)-1
+                            if (((x in range(0,loopstart)) and (y in range(0,loopstart))) or ((x in range(loopend+1,int(partslist[0])+1)) and (y in range(loopend+1,int(partslist[0])+1)))):
                                 log.debug("a")
                                 flagvalid=1
                                 finalpredictedspos=predictedspos
                                 finalpredictedepos=predictedepos
 
-                            elif (x in range(0,loopstart))  and  (y in range(loopstart,loopend+1)):
+                            elif (x in range(0,loopstart)) and (y in range(loopstart,loopend+1)):
                                 flagvalid=1
                                 shiftby=y-(loopstart-1)
                                 if x<=shiftby:
@@ -2809,8 +2682,8 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
                                 finalpredictedepos=-1
 
                         if i==len(partslist)-1 and flagvalid!=1:
-                            loopstart=hairpin.rindex('(',int(partslist[i])+1)+1
-                            loopend=hairpin.index(')',int(partslist[i])+1)-1
+                            loopstart=hairpin.rfind('(',int(partslist[i])+1)+1
+                            loopend=hairpin.find(')',int(partslist[i])+1)-1
 
                             if (((x in range(int(partslist[i]),loopstart)) and (y in range(int(partslist[i]),loopstart) )) or ((x in range(loopend+1,len(hairpin))) and (y in range(loopend+1,len(hairpin))))):
                                 log.debug("1")
@@ -2866,8 +2739,8 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
                                 finalpredictedepos=-1
 
                         if i!=0 and i!=len(partslist)-1 and i%2==0 and flagvalid!=1:
-                            loopstart=hairpin.rindex('(',int(partslist[i-1]),int(partslist[i])+1)+1
-                            loopend=hairpin.index(')',int(partslist[i-1]),int(partslist[i])+1)-1
+                            loopstart=hairpin.rfind('(',int(partslist[i-1]),int(partslist[i])+1)+1
+                            loopend=hairpin.find(')',int(partslist[i-1]),int(partslist[i])+1)-1
                             if (((x in range(int(partslist[i-1]),loopstart)) and (y in range(int(partslist[i-1]),loopstart))) or ((x in range(loopend+1,int(partslist[i])+1)) and (y in range(loopend+1,int(partslist[i])+1)))):
                                 log.debug("9")
                                 flagvalid=1
@@ -2922,8 +2795,8 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
                                 finalpredictedepos=-1
 
                 if parts==1:
-                    loopstart=hairpin.rindex('(')+1
-                    loopend=hairpin.index(')')-1
+                    loopstart=hairpin.rfind('(')+1
+                    loopend=hairpin.find(')')-1
                     if (((x in range(0,loopstart)) and (y in range(0,loopstart))) or ((x in range(loopend+1,len(hairpin))) and (y in range(loopend+1,len(hairpin))))):
                         finalpredictedspos=x
                         finalpredictedepos=y
@@ -2987,175 +2860,12 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
 
         return finalpredictedspos,(finalpredictedepos+1)
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
         )
         log.error(logid+''.join(tbe.format()))
-
-
-def doalifold(alnfile,outdir):
-    logid = scriptname+'.doalifold: '
-    try:
-        f=os.popen("RNAalifold --noPS "+alnfile)
-        alifoldtemp=outdir+'alifoldtemp.txt'
-        foldrestemp=open(alifoldtemp,'w')
-        fi=f.read()
-        foldrestemp.write(fi)
-        foldrestemp.close()
-        f.close()
-    except Exception as err:
-        exc_type, exc_value, exc_tb = sys.exc_info()
-        tbe = tb.TracebackException(
-            exc_type, exc_value, exc_tb,
-        )
-        log.error(logid+''.join(tbe.format()))
-
-
-def getstructure(alifoldtemp):
-    logid = scriptname+'.getstructure: '
-    try:
-        for line in (openfile(alifoldtemp)):
-            item=line.split()
-            hairpin = ''
-            if len(item)>0 and 'A' not in item[0] and 'C' not in item[0] and 'G' not in item[0] and 'T' not in item[0] and 'a' not in item[0] and 'c' not in item[0] and 'g' not in item[0] and 't' not in item[0] and 'N' not in item[0] and 'n' not in item[0] and ('.' in item[0] or '(' in item[0] or ')' in item[0]):
-                hairpin=item[0]
-                return str(hairpin)
-    except Exception as err:
-        exc_type, exc_value, exc_tb = sys.exc_info()
-        tbe = tb.TracebackException(
-            exc_type, exc_value, exc_tb,
-        )
-        log.error(logid+''.join(tbe.format()))
-
-
-def cal_ent(s):
-    logid = scriptname+'.cal_ent: '
-    try:
-        listofchars=[0,0,0,0,0]
-
-        seqi=s
-        lengseqi=len(seqi)
-        listofsites = []
-        for i in seqi:#loop on the sequences on each site
-            if i == 'A'or i =='a':
-                listofchars[0]=(listofchars[0]+1)#/numofseqs
-            if i == 'C'or i =='c':
-                listofchars[1]=(listofchars[1]+1)#/numofseqs
-            if i == 'G'or i =='g':
-                listofchars[2]=(listofchars[2]+1)#/numofseqs
-            if i == 'T'or i =='t' or i =='u' or i =='U'  :
-                listofchars[3]=(listofchars[3]+1)#/numofseqs
-            if i == '-'or i =='.':
-                listofchars[4]=(listofchars[4]+1)#/numofseqs
-
-        listofsites.append(listofchars)#list of sites adding the ratio for each of them
-        listofchars = [0,0,0,0,0]
-        for k in range (0,5):#find ratio of each nucleotide at a specific site
-            listofchars[k]=listofchars[k]/lengseqi
-
-        listofsites.append(listofchars)#list of sites adding the ratio for each of them
-        PA=0
-        PC=0
-        PG=0
-        PT=0
-        PGA=0
-        PA=(listofsites[0][0])/lengseqi
-        PC=(listofsites[0][1])/lengseqi
-        PG=(listofsites[0][2])/lengseqi
-        PT=(listofsites[0][3])/lengseqi
-        PGA=(listofsites[0][4])/lengseqi
-        EA=0
-        EC=0
-        EG=0
-        ET=0
-        EGA=0
-
-        if PA > 0:
-            EA=(PA*(math.log(PA,2)))
-        else:
-            EA=0
-
-        if PC > 0:
-            EC=(PC*(math.log(PC,2)))
-        else:
-            EC=0
-
-        if PG > 0:
-            EG=(PG*(math.log(PG,2)))
-        else:
-            EG=0
-
-        if PT > 0:
-            ET=(PT*(math.log(PT,2)))
-        else:
-            ET=0
-
-        if PGA > 0:
-            EGA= (PGA*(math.log(PGA,2)))
-        else:
-            EGA=0
-
-        #Entropy=-1* ((PA*(math.log(PA,2)))+ (PC*(math.log(PC,2))) + (PG*(math.log(PG,2))) + (PT*(math.log(PT,2))) + (PGA*(math.log(PGA,2))))
-        Entropy=-1* (EA+EC+EG+ET+EGA)
-
-        return Entropy
-    except Exception as err:
-        exc_type, exc_value, exc_tb = sys.exc_info()
-        tbe = tb.TracebackException(
-            exc_type, exc_value, exc_tb,
-        )
-        log.error(logid+''.join(tbe.format()))
-
-
-def CalShanon(stkfile):
-    logid = scriptname+'.CalShanon: '
-    try:
-        aligEnt=0
-        nameOffile=stkfile
-        listofchars = [] #use as temp to count nucleotides at each site
-        listofsites = [] #use to store the ratio of each nucleotide at each site, i filled it as list of list
-        lengseq=0  #lenght of sequence, NOTE: all should be same
-        numofseqs=0
-        #loop to initialize nucleotides' list to zero
-        for i in range (0,5):
-            listofchars.append(0)
-
-            #Fill the list of sites with the ratios of nucleotides
-        alignment = AlignIO.read(nameOffile, "stockholm")
-
-        for record1 in  alignment:
-            numofseqs+=1
-            recid1= record1.id
-            seqi=str(record1.seq)
-            lengseq=len(seqi)
-
-        SeqEachSite=[]
-        EntEachSite=[]
-
-        for i in  range (0,lengseq):
-            EntEachSite.append("")
-            SeqEachSite.append("")
-
-        for record in alignment:
-            seqtemp=str(record.seq)
-            for i in range(0,lengseq):
-                SeqEachSite[i]=SeqEachSite[i]+seqtemp[i]
-
-        for i in range(0,lengseq):
-            EntEachSite=cal_ent(SeqEachSite[i])
-            aligEnt=aligEnt+EntEachSite
-
-        return aligEnt
-
-    except Exception as err:
-        exc_type, exc_value, exc_tb = sys.exc_info()
-        tbe = tb.TracebackException(
-            exc_type, exc_value, exc_tb,
-        )
-        log.error(logid+''.join(tbe.format()))
-
 
 def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofnewloop,listoldstatus,templong,listmisalignedcorr,listcorrected,listcorrectedori,listgoodnew):
     logid = scriptname+'.correct: '
@@ -3188,29 +2898,54 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                 correctmir=str(listoldstatus[corrind+3])
                 correctmirstar=str(listoldstatus[corrind+4])
                 orien=str(listoldstatus[corrind+5])
-                coor1=int(longseq.index(correctmir))
-                coor2=int(longseq.index(correctmirstar))
+                #coor1=int(longseq.find(correctmir)) #CAVH
+                #coor2=int(longseq.find(correctmirstar)) #CAVH
+                #CAVH
+                (coor1, coor2, correctfinalseq) = find_positions(longseq, correctseq,
+                                                 correctmir, correctmirstar,
+                                                 flanking)
 
                 if coor2<coor1:
                     tempcor=correctmir[:]
                     correctmir=correctmirstar[:]
                     correctmirstar=tempcor[:]
 
-                startmatlong=int(longseq.index(correctmir))#position of mir in the long seq
-                startfinalseq=startmatlong-flanking#the start position in the long seq, based on user flanking
-                templongseq=longseq[startfinalseq:]#cut the long, with userflanking number of nucleotides
-                log.debug(["1st temp",startmatlong,startfinalseq,templongseq])
-                startmatstarlong=int(templongseq.index(correctmirstar))
-                endmatstarlong=int(startmatstarlong+len(correctmirstar)-1)
-                endfinalseq=endmatstarlong+flanking
-                log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
-                correctfinalseq=str(templongseq[:endfinalseq+1])
+                #startmatlong=int(longseq.find(correctmir))#position of mir in the long seq
+                #startfinalseq=startmatlong-flanking#the start position in the long seq, based on user flanking
+                #templongseq=longseq[startfinalseq:]#cut the long, with userflanking number of nucleotides
+                #CAVH
+                #endmatlong=int(startmatlong + len(correctmir)-1) #End position mir
+                #templongnomirseq=longseq[endmatlong:] #Cut at the end position
+                #
+                #log.debug(["1st temp",startmatlong,startfinalseq,templongseq])
+                #startmatstarlong=int(templongseq.find(correctmirstar))
+                #startmatstarlong=int(templongnomirseq.find(correctmirstar)) #CAVH, search without mature seq detec    ted earlier
+                #endmatstarlong=int(startmatstarlong+len(correctmirstar)-1)
+                #endfinalseq=endmatstarlong+flanking
+                #contextlongmature = int(templongseq.find(templongnomirseq)) #CAVH search start of portion without mir
+                #endfinalseqcontex=endfinalseq + contextlongmature #CAVH Update end coord
+                #log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
+                #correctfinalseq=str(templongseq[:endfinalseq+1])
+                #correctfinalseq=str(templongseq[:endfinalseqcontex+1]) #CAVH
+
+                #CAVH: Avoid overlapping on precursor:
+                start_mir = correctfinalseq.find(correctmir)
+                end_mir = (start_mir + len(correctmir)) - 1
+                correctfinalseqnomir = correctfinalseq[end_mir + 1:]
+                index_to_update = correctfinalseq.find(correctfinalseqnomir)
                 listmisalignedcorr.append(corriddes)
                 listmisalignedcorr.append(correctfinalseq)
-                listmisalignedcorr.append(int(correctfinalseq.index(correctmir)))
-                listmisalignedcorr.append(int(correctfinalseq.index(correctmir))+len(correctmir))
-                listmisalignedcorr.append(int(correctfinalseq.index(correctmirstar)))
-                listmisalignedcorr.append(int(correctfinalseq.index(correctmirstar))+len(correctmirstar))
+                listmisalignedcorr.append(int(start_mir))
+                listmisalignedcorr.append(int(end_mir))
+                #listmisalignedcorr.append(int(correctfinalseq.find(correctmir))) #CAVH
+                #listmisalignedcorr.append(int(correctfinalseq.find(correctmir))+len(correctmir)) #CAVH
+                start_mirstar_temp = correctfinalseqnomir.find(correctmirstar)
+                star_mirstar = start_mirstar_temp + index_to_update
+                end_mirstar = (start_mirstar + len(correctmirstar)) - 1
+                listmisalignedcorr.append(int(star_mirstar))
+                listmisalignedcorr.append(int(end_mirstar))
+                #listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar))) # CAVH
+                #listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar))+len(correctmirstar)) #CAVH
                 listmisalignedcorr.append(str(orien))
                 countcorrected=countcorrected+1
                 listcorrected.append(corriddes.strip())
@@ -3227,51 +2962,79 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                 correctmir=str(listgoodnew[corrind+3])
                 correctmirstar=str(listgoodnew[corrind+4])
                 orien=str(listgoodnew[corrind+6])
-                coor1=int(longseq.index(correctmir))
-                coor2=int(longseq.index(correctmirstar))
+                #coor1=int(longseq.find(correctmir))
+                #coor2=int(longseq.find(correctmirstar))
+                #CAVH
+                (coor1, coor2, correctfinalseq) = find_positions(longseq, correctseq,
+                                                 correctmir, correctmirstar,
+                                                 flanking)
 
                 if coor2<coor1:
                     tempcor=correctmir[:]
                     correctmir=correctmirstar[:]
                     correctmirstar=tempcor[:]
 
-                startmatlong=int(longseq.index(correctmir))#position of mir in the long seq
-                startfinalseq=startmatlong-flanking#the start position in the long seq, based on user flanking
-                templongseq=longseq[startfinalseq:]#cut the long, with userflanking number of nucleotides
-                log.debug(["1st temp",startmatlong,startfinalseq,templongseq])
-                startmatstarlong=int(templongseq.index(correctmirstar))
-                endmatstarlong=int(startmatstarlong+len(correctmirstar)-1)
-                endfinalseq=endmatstarlong+flanking
-                log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
-                correctfinalseq=str(templongseq[:endfinalseq+1])
+                #startmatlong=int(longseq.find(correctmir))#position of mir in the long seq
+                #startfinalseq=startmatlong-flanking#the start position in the long seq, based on user flanking
+                #templongseq=longseq[startfinalseq:]#cut the long, with userflanking number of nucleotides
+                ## CAVH
+                #endmatlong=int(startmatlong + len(correctmir)-1)
+                #templongnomirseq=longseq[endmatlong:]
+                #
+                #log.debug(["1st temp",startmatlong,endmatlong,startfinalseq,templongseq])
+                #startmatstarlong=int(templongseq.find(correctmirstar))
+                #startmatstarlong=int(templongnomirseq.find(correctmirstar)) #CAVH, search without mature seq detected earlier
+                #endmatstarlong=int(startmatstarlong+len(correctmirstar)-1)
+                #endfinalseq=endmatstarlong+flanking
+                #contextlongmature = int(templongseq.find(templongnomirseq))
+                #endfinalseqcontex=endfinalseq + contextlongmature #CAVH
+                #log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
+                #correctfinalseq=str(templongseq[:endfinalseq+1])
+                #correctfinalseq=str(templongseq[:endfinalseqcontex+1]) #CAVH
+
+                start_mir = correctfinalseq.find(correctmir)
+                end_mir = (start_mir + len(correctmir)) - 1
+                correctfinalseqnomir = correctfinalseq[end_mir + 1:]
+                index_to_update = correctfinalseq.find(correctfinalseqnomir)
                 listmisalignedcorr.append(corriddes)
                 listmisalignedcorr.append(correctfinalseq)
-                listmisalignedcorr.append(int(correctfinalseq.index(correctmir)))
-                listmisalignedcorr.append(int(correctfinalseq.index(correctmir))+len(correctmir))
-                listmisalignedcorr.append(int(correctfinalseq.index(correctmirstar)))
-                listmisalignedcorr.append(int(correctfinalseq.index(correctmirstar))+len(correctmirstar))
+                #listmisalignedcorr.append(int(correctfinalseq.find(correctmir))) #CAVH
+                #listmisalignedcorr.append(int(correctfinalseq.find(correctmir))+len(correctmir)) #CAVH
+                #listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar))) #CAVH
+                #listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar))+len(correctmirstar)) #CAVH
+                listmisalignedcorr.append(int(start_mir))
+                listmisalignedcorr.append(int(end_mir))
+                start_mirstar_temp = correctfinalseqnomir.find(correctmirstar)
+                star_mirstar = start_mirstar_temp + index_to_update
+                end_mirstar = (start_mirstar + len(correctmirstar)) - 1
+                listmisalignedcorr.append(int(star_mirstar))
+                listmisalignedcorr.append(int(end_mirstar))
                 listmisalignedcorr.append(str(orien))
                 countcorrectedTonew=int(countcorrectedTonew)+1
                 listcorrectedori.append(corriddes.strip())
                 log.debug(["corrected seq",correctfinalseq])
-                if corid.strip()=='la-mir-30c' or corriddes.strip()=='MI0019480':
-                    log.debug("IN correct test here")
-                    log.debug(["long seq",longseq,templong[indexlongmat]])
-                    log.debug(["1st temp",startmatlong,startfinalseq,templongseq])
-                    log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
-                    log.debug(["list misaligned",listmisalignedcorr])
+                # CAVH: There is no reason to have this here:
+                #if corid.strip()=='la-mir-30c' or corriddes.strip()=='MI0019480':
+                #    log.debug("IN correct test here")
+                #    log.debug(["long seq",longseq,templong[indexlongmat]])
+                #    log.debug(["1st temp",startmatlong,startfinalseq,templongseq])
+                #    log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
+                #    log.debug(["list misaligned",listmisalignedcorr])
 
         return int(countcorrected),int(countcorrectedTonew),listmisalignedcorr,listcorrected,listcorrectedori
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
         )
         log.error(logid+''.join(tbe.format()))
 
-def sublist(filename):
+
+def sublist(queue, configurer, level, filename, args):
     logid = scriptname+'.sublist: '
+    configurer(queue, level)
+    log.debug(logid+'Starting to process '+str(filename))
     try:
         filesdir=str(args.famdir)#dir for families
         command="list"
@@ -3301,6 +3064,7 @@ def sublist(filename):
         listofboth=[]#add the id, that shouldn't be added to the new file
         listremovedbroken=[]
         listremovedscore=[]
+        listremovedN=[]
         listofmirstar=[]
         listnomat=[]
         list2mat=[]
@@ -3309,6 +3073,9 @@ def sublist(filename):
         listmatcoor=[]
         listnogenomes=[]#list of IDs that no existing genome to search, for their species
         listnotingenome=[]#list of IDs that are not found in the genome searched, for their species
+        listremovenoloop = [] #Collect candidates without loop after curation
+        listhighmfe = [] #Collect all candidates with high MFE after all curation
+        listlonghairpin = [] #Collect all candidates with a final reported hairpin
         nomats=0
         templong=[]
         userflanking=0
@@ -3347,7 +3114,7 @@ def sublist(filename):
         suma=[]
         sumall=[]
         nomats=0#in case no mat exists and no mats at all
-        userflanking=0
+        #userflanking=0 #redundant
         listnomatremoved=[]
         flagnomatexists=False
 
@@ -3426,14 +3193,14 @@ def sublist(filename):
             log.debug(logid+"The file "+filename.strip()+" already processed, will be done again")
             os.remove(outdir+'nomat-'+filename+'.fa')
 
-        flagnomatexists,nomats,listremovedbroken,listremovedscore,listnomat=checknomat(filen,mapfile,matfile,outdir,filename,listremovedbroken,listremovedscore,nomats,listnomat)
+        flagnomatexists,nomats,listremovedbroken,listremovedscore,listremovedN,listnomat=checknomat(filen,mapfile,matfile,outdir,filename,listremovedbroken,listremovedscore,listremovedN,nomats,listnomat)
 
         if flagnomatexists and nomats!=-1:
             log.debug(logid+"flagnomatexists"+str(flagnomatexists)+';'+str(nomats))
             if os.path.isfile(outdir+filename.strip()+"-new.fa"):
                 os.remove(outdir+filename.strip()+"-new.fa")
 
-            listnomatremoved=listremovedbroken+listremovedscore
+            listnomatremoved=listremovedbroken+listremovedscore+listremovedN
             log.debug(logid+str(["all removed",listnomatremoved]))
 
             if len(listnomatremoved)>0:
@@ -3442,7 +3209,7 @@ def sublist(filename):
                 for record in SeqIO.parse(fl, 'fasta'):
                     tempdes=record.description
                     tempdeslst=record.description.split()
-                    if tempdeslst[1].strip() not in listremovedscore and tempdeslst[1].strip() not in listremovedbroken:# and tempdeslst[1].strip() not in lst2mat:
+                    if tempdeslst[1].strip() not in listremovedscore and tempdeslst[1].strip() not in listremovedbroken and tempdeslst[1].strip() not in listremovedN:# and tempdeslst[1].strip() not in lst2mat:
                         newprecfile=open(outdir+filename+"-new.fa",'a')
                         newprecfile.write(">"+str(tempdes)+"\n"+str(record.seq)+"\n")
                         newprecfile.close()
@@ -3452,9 +3219,9 @@ def sublist(filename):
                     os.remove(f)
 
             if len(listnomatremoved)>0:
-                listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listnogenomes,listnotingenome,templong,listgoodnew=flip(filename.strip(),outdir+filename+"-new.fa",outdir,mapfile,matfile,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,list2mat,listnogenomes,listnotingenome,templong,listgoodnew)
+                listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, listnogenomes, listnotingenome, templong, listgoodnew=flip(filename.strip(), outdir+filename+"-new.fa", outdir, mapfile, matfile, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, list2mat, listnogenomes, listnotingenome, templong, listgoodnew, args)
             else:
-                listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listnogenomes,listnotingenome,templong,listgoodnew=flip(filename.strip(),filen,outdir,mapfile,matfile,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,list2mat,listnogenomes,listnotingenome,templong,listgoodnew)
+                listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, listnogenomes, listnotingenome, templong, listgoodnew=flip(filename.strip(), filen, outdir, mapfile, matfile, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, list2mat, listnogenomes, listnotingenome, templong, listgoodnew, args)
 
         elif flagnomatexists and nomats==-1:
             log.debug(logid+"flagnomatexists"+str(flagnomatexists)+';'+str(nomats))
@@ -3463,7 +3230,7 @@ def sublist(filename):
 
         elif not flagnomatexists:
             log.debug(logid+str(["this flip",flagnomatexists]))
-            listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listnogenomes,listnotingenome,templong,listgoodnew=flip(filename.strip(),filen,outdir,mapfile,matfile,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,list2mat,listnogenomes,listnotingenome,templong,listgoodnew)#filename: filename/family, filen: the file itself(with the directory)
+            listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, listnogenomes, listnotingenome, templong, listgoodnew=flip(filename.strip(), filen, outdir, mapfile, matfile, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, list2mat, listnogenomes, listnotingenome, templong, listgoodnew, args)#filename: filename/family, filen: the file itself(with the directory)
 
         log.debug(logid+"listofnew: "+str(listofnew))
         if os.path.isfile(outdir+filename+"-new.fa"):
@@ -3499,6 +3266,7 @@ def sublist(filename):
 
         listnomatbroken=listremovedbroken
         listnomatscore=listremovedscore
+        listnomatN = listremovedN
 
         if len(list2mat)>0:
             log.debug(logid+"list2mat: "+str(list2mat))
@@ -3518,35 +3286,47 @@ def sublist(filename):
                     specie=precitem[2].strip()+" "+precitem[3]
                     mspos=None
                     mepos=None
-                    mspos=pseq.index(fmatseq)
-                    mepos=pseq.rindex(ematseq)  # rfind returns the last index of the match
+                    mspos=pseq.find(fmatseq)
+                    mepos=pseq.rfind(ematseq)  # rfind returns the last index of the match
 
 #                    if not mspos and mepos:
 #                        mspos=pseq.rfind(str(Seq(fmatseq).reverse_complement()))
 #                        mepos=pseq.find(str(Seq(ematseq).reverse_complement()))
                     # Now we have found start and end position on plus and minus strands
 
+
+
                     xcutseq=len(pseq[:mspos])#used in case the seq not found in the genome
                     ycutseq=len(pseq[mepos+1:])
 
                     if precID==pid:
+                        # On miRBase some mature were assigned for the same miRNAs.
+                        if mspos == -1 or mepos == -1:
+                            log.error(logid+'Referred mir or mir* from '+pid+' did not fit into the precursor, maybe some reference is repeated on mapping file?')
+                            sys.exit()
+
                         long2matseq=""
-                        long2matseq,listnogenomes,listnotingenome=getindex2mat(pseq.replace("U","T"),specie,precID,precDes,listnogenomes,listnotingenome)  # from here on we have the reverse complement if seq on minus strand
+                        long2matseq, listnogenomes, listnotingenome=getindex2mat(pseq.replace("U", "T"), specie, precID, precDes, listnogenomes, listnotingenome, args)  # from here on we have the reverse complement if seq on minus strand
                         log.debug(logid+'long2matseq: '+str(long2matseq))
 
                         if long2matseq!="":
-                            if xcut>=0 and xcut<=50:
-                                fspos=(mspos+100)-xcut
-                            elif xcut>50 or xcut<0:
-                                fspos=(mspos+100)-10
+                            #CAVH
+                            (fspos, fepos, cutpseq) = find_positions(long2matseq, pseq.replace("U", "T"),
+                                                                             fmatseq.replace("U", "T"), ematseq.replace("U", "T"),
+                                                                             userflanking)
 
-                            if ycut>=0 and ycut<=50:
-                                fepos=(mepos+100)+ycut
-                            elif ycut>50 or ycut<0:
-                                fepos=(mepos+100)+10
+                            #if xcut>=0 and xcut<=50:
+                            #    fspos=(mspos+100)-xcut
+                            #elif xcut>50 or xcut<0:
+                            #    fspos=(mspos+100)-10
 
-                            #cutpseq=long2matseq[fspos:fepos+1]
-                            cutpseq=long2matseq[fspos:fepos+len(ematseq)]
+                            #if ycut>=0 and ycut<=50:
+                            #    fepos=(mepos+100)+ycut
+                            #elif ycut>50 or ycut<0:
+                            #    fepos=(mepos+100)+10 #This is the start of mir*
+
+                            ##cutpseq=long2matseq[fspos:fepos+1]
+                            #cutpseq=long2matseq[fspos:fepos+len(ematseq)]
                             with open(outdir+filename+"-res.fa","a") as familyfileres:
                                 familyfileres.write(">"+str(record.description)+"\n"+str(cutpseq).replace('T','U')+"\n")
                             with open(outdir+filename.strip()+"-Final.fasta","a") as familyfileresfinal:
@@ -3594,7 +3374,7 @@ def sublist(filename):
             del listofmirstar[:]
 
         if ".fa" in filename:
-            filename=filename[:filename.index(".fa")]
+            filename=filename[:filename.find(".fa")]
             resultfastafile=outdir+filename.strip()+"-res.fa"
         else:
             resultfastafile=outdir+filename.strip()+"-res.fa"
@@ -3621,23 +3401,46 @@ def sublist(filename):
                     mtf = openfile(matfile)
                     first = None
                     second = None
+                    curmatseq = None
+                    curmatstar = None
+                    #Here use find because both matures were reported at the
+                    #Beginning and we are iterating over the complete mature file
                     for record in SeqIO.parse(mtf, 'fasta'):
-                        curmatseq=str(record.seq)
-                        if firstmat.strip() in record.description:
-                            startmat=int(mat2seq.index(curmatseq))
-                            endmat=startmat+len(curmatseq)-1
+                        sequence=str(record.seq)
+                        if firstmat.strip() == record.description.split(" ")[1]: #CAVH specific label
+                            #startmat=int(mat2seq.find(curmatseq))
+                            #endmat=(startmat+len(curmatseq))-1
                             first = 'Found'
-                            log.debug(logid+str(["heres new",mat2seq,startmat,endmat,curmatseq]))
+                            curmatseq = sequence
+                            #log.debug(logid+str(["heres new mir",mat2seq,startmat,endmat,curmatseq]))
 
-                        if lastmat.strip() in record.description:
-                            startmatstar=int(mat2seq.index(curmatseq))
-                            endmatstar=startmatstar+len(curmatseq)-1
+                        if lastmat.strip() == record.description.split(" ")[1]: #CAVH specific label
+                            #startmatstar = int(mat2seq.find(curmatseq))
+                            #endmatstar=(startmatstar+len(curmatseq))-1
                             second = 'Found'
-                            log.debug(logid+str(["heres new",startmatstar,endmatstar,curmatseq]))
+                            curmatstar = sequence
+                            #log.debug(logid+str(["heres new mir*",mat2seq,startmatstar,endmatstar,curmatseq]))
+                    (startmat, startmatstar, finalseq) = find_positions(mat1seq, mat1seq,curmatseq, curmatstar,userflanking)
+                    #endmat = startmat+len(curmatseq)-1
+                    #endmatstar = (startmatstar+len(curmatstar))-1
+                    #CAVH: Because was find(), check that startmat, endmat, startmatstar, endmatstar have values != None
+                    log.debug(logid+str([startmat, startmatstar, finalseq]))
+                    if startmat == None or startmatstar == None:
+                    #if startmat == None or endmat == None or startmatstar == None or endmatstar == None:
+                        log.error(logid+'Not possible to locate the mapping referred mir or mir* on the mature file for '+resprecid+' with '+mat2seq)
+                        #sys.exit()
 
-                        if first and second:
-                            coorflag=1
-                            break
+                    endmat = startmat+len(curmatseq)-1
+                    endmatstar = (startmatstar+len(curmatstar))-1
+                    log.debug(logid+str(["heres new",mat2seq,finalseq,startmat,endmat,startmatstar,endmatstar,curmatseq,curmatstar]))
+                    #CAVH: Because was find(), check that startmat, endmat, startmatstar, endmatstar have values != -1
+                    #if startmat == -1 or endmat == -1 or startmatstar == -1 or endmatstar == -1:
+                    #    log.error(logid+'Not possible to locate the mapping referred mir or mir* on the mature file for '+resprecid+' with '+mat2seq)
+                    #    sys.exit()
+                    #if first and second:
+                    if first and second and startmat != None and startmatstar != None:
+                        coorflag=1
+                        #break
 
                     if coorflag==1:
                         list2matcoor.append(firstmat.strip())
@@ -3683,8 +3486,19 @@ def sublist(filename):
                             star=True
                             break
 
-                    coortemp1=int(mat1seq.index(curmatseq))
-                    coortemp2=int(mat1seq.index(curmatstar))
+                    #coortemp1=int(mat1seq.index(curmatseq))
+                    #coortemp2=int(mat1seq.index(curmatstar))
+                    # Here genome did not exists, then it is reeplaced by the same precursor seq to obtain
+                    # the mature coordinates
+                    (coortemp1, coortemp2, finalseq) = find_positions(mat1seq, mat1seq,
+                                                 curmatseq, curmatstar,
+                                                 userflanking)
+
+
+                    #if coortemp1 == -1 or coortemp2 == -1:
+                    #    log.error(logid+'Not possible to locate miR or miR* in '+curmatID+' with '+mat1seq+" and "+curmatseq+ " and "+ curmatstar)
+                    #    sys.exit()
+
 
                     if coortemp2<coortemp1:
                         tempseqex=curmatseq[:]
@@ -3692,36 +3506,41 @@ def sublist(filename):
                         curmatstar=tempseqex[:]
 
                     log.debug(logid+str(["no long",coortemp1,coortemp2,curmatseq,curmatstar]))
+                    startmat=coortemp1
+                    endmat=(startmat+len(curmatseq))-1
+                    #startmattemp=int(mat1seq.find(curmatseq))
 
-                    startmattemp=int(mat1seq.index(curmatseq))
+                    #if startmattemp<=userflanking:
+                    #    startmat=startmattemp
+                    #    startfinalseq=0
+                    #elif startmattemp>userflanking:
+                    #    startmat=userflanking
+                    #    startfinalseq=startmattemp-(startmat-userflanking)
 
-                    if startmattemp<=userflanking:
-                        startmat=startmattemp
-                        startfinalseq=0
-                    elif startmattemp>userflanking:
-                        startmat=userflanking
-                        startfinalseq=startmattemp-(startmat-userflanking)
-
-                    endmat=startmat+len(curmatseq)-1
-                    tempseq=mat1seq[startfinalseq:]
-
-                    log.debug(logid+str(["curmat not",mat1seq,curmatseq]))
-                    log.debug(logid+str(['coor not',startmat,endmat]))
+                    #endmat=(startmat+len(curmatseq))-1
+                    #tempseq=mat1seq[startfinalseq:]
+                    #tempnomirseq=mat1seq[endmat:] #CAVH fragment without detected mir
+                    #updateindexnomirregion = int(tempseq.find(tempnomirseq)) #CAVH start of no mir region on tempseq context
+                    #log.debug(logid+str(["curmat not",mat1seq,curmatseq]))
+                    #log.debug(logid+str(['coor not',startmat,endmat]))
 
                     if star:
-                        startmatstar=int(tempseq.index(curmatstar))
+                        startmatstar=coortemp2
                         endmatstar=startmatstar+int(len(curmatstar)-1)
-                        numberendflank=int(len(tempseq)-endmatstar-1)
+                        #startmatstar=int(tempnomirseq.find(curmatstar)) #CAVH search on region without mir
+                        #endmatstar=startmatstar+int(len(curmatstar)-1)
+                        #endmatstar = startmatstar+int(len(curmatstar)-1) + updateindexnomirregion #CAVH
+                        #numberendflank=int(len(tempseq)-endmatstar-1)
 
-                        if numberendflank<=userflanking:
-                            finalseq=tempseq[0:]
-                        elif numberendflank>userflanking:
-                            endfinalseq=endmatstar+userflanking
-                            finalseq=tempseq[0:endfinalseq+1]
+                        #if numberendflank<=userflanking:
+                        #    finalseq=tempseq[0:]
+                        #elif numberendflank>userflanking:
+                        #    endfinalseq=endmatstar+userflanking
+                        #    finalseq=tempseq[0:endfinalseq+1]
 
                         log.debug(logid+str(['coor star not',startmatstar,endmatstar,finalseq]))#,startmatstarlong,endmatstarlong)
 
-                    if star and nstar and  startmatstar!=-1 and endmatstar!=-1 and startmatstar>endmat:
+                    if star and nstar and startmatstar!=-1 and endmatstar!=-1 and startmatstar>endmat:
                         list1matcoor.append(curmatID.strip())#mat original
                         list1matcoor.append(curmatsplit[1].strip())#matstarID
                         list1matcoor.append(startmat)
@@ -3751,7 +3570,7 @@ def sublist(filename):
                         break
 
                     elif (not star and nstar) or startmatstar==-1 or endmatstar==-1:
-                        startmat=int(mat1seq.index(curmatseq))
+                        startmat=int(mat1seq.find(curmatseq))
                         endmat=startmat+len(curmatseq)-1
                         finalseq=mat1seq
                         startmstar=0
@@ -3828,44 +3647,140 @@ def sublist(filename):
                             curmatsplit=(starrec.description).split()
                             curmatsplit1=(curmatsplit[1]).split('-')
                             starrecID=curmatsplit1[0]
-                            if (curmatID).strip()==(starrecID).strip() or (curmatID).strip()+'/' in (starrecID).strip()and (resprecid.strip() in starrec.description):
+                            #if (curmatID).strip()==(starrecID).strip(): #or (curmatID).strip()+'/' in (starrecID).strip() and (resprecid.strip() in starrec.description):
+                            if (curmatID).strip()==(starrecID).strip(): #CAVH
                                 curmatstar=str(starrec.seq)
                                 star=True
                                 break
-                            else:
-                                log.debug(logid+'Searching for curmatstar in '+str(starrec)+' with '+';'.join([curmatID.strip(),starrecID.strip(),resprecid.strip(),starrec.description]))
+                            #else:
+                            #    log.debug(logid+'Searching for curmatstar in '+str(starrec)+' with '+';'.join([curmatID.strip(),starrecID.strip(),resprecid.strip(),starrec.description]))
 
                     if not curmatstar:
-                        log.error(logid+'Not possible to define curmatstar for '+str(matfile)+' and '+str(outdir+filename.strip()+"-mirstar.fa"))
+                        log.error(logid+'Not possible to define curmatstar for '+ resprecid +' in '+str(matfile)+' and '+str(outdir+filename.strip()+"-mirstar.fa"))
                         sys.exit()
 
-                    log.debug(["coor1temp",longseq,curmatseq])
-                    coortemp1=int(longseq.index(curmatseq))
-                    coortemp2=int(longseq.index(curmatstar))
+                    log.debug(["coor1temp",longseq,curmatseq,curmatstar,resprecid])
+                    #coortemp1=int(longseq.index(curmatseq))
+                    #coortemp2=int(longseq.index(curmatstar))
+                    #CAVH
+                    (coortemp1, coortemp2, finalseq) = find_positions(longseq, mat2seq,
+                                                 curmatseq, curmatstar,
+                                                 userflanking)
+
+                    if coortemp1 == None or coortemp2 == None:
+                        log.error(logid+'Not possible to locate miR or miR* in ' + curmatID)
+
                     if coortemp2<coortemp1:
                         tempseqex=curmatseq[:]
                         curmatseq=curmatstar[:]
                         curmatstar=tempseqex[:]
 
-                    startmatlong=int(longseq.index(curmatseq))
-                    startfinalseq=startmatlong-userflanking
-                    startmat=userflanking
-                    endmat=startmat+len(curmatseq)-1
-                    templongseq=longseq[startfinalseq:]
-                    log.debug(["curmat long",mat1seq,curmatseq,longseq])
-                    log.debug(['coor long',startmat,endmat])
+                    #CAVH
+                    #startmatlong=int(longseq.find(curmatseq))
+                    #startfinalseq=startmatlong-userflanking
+                    #startmat=userflanking
+                    #endmat=(startmat+len(curmatseq))-1
+                    #endmatlong=int(startmatlong + len(curmatseq)-1) #CAVH exlude all
+                    #templongseq=longseq[startfinalseq:]
+                    #templongnomirseq=longseq[endmatlong:] #CAVH portion without mir
+                    #contextlongmature = int(templongseq.find(templongnomirseq)) #CAVH update coordinates on mir context
+                    #log.debug(["curmat long",mat1seq,curmatseq,longseq])
+                    #log.debug(['coor long',startmat,endmat])
 
-                    startmatstarlong=int(templongseq.index(curmatstar))
-                    endmatstarlong=int(startmatstarlong+len(curmatstar)-1)
-                    endfinalseq=endmatstarlong+userflanking
-                    finalseq=str(templongseq[:endfinalseq+1])
+                    #startmatstarlong=int(templongseq.find(curmatstar)) # CAVH
+                    #startmatstarlong=int(templongnomirseq.find(curmatstar))
+                    #endmatstarlong=int(startmatstarlong+len(curmatstar)-1)
+                    #endfinalseq=endmatstarlong+userflanking
+                    #endfinalseqcontex=endfinalseq + contextlongmature #CAVH
+                    #finalseq = str(templongseq[:endfinalseqcontex+1]) #CAVH
+                    #finalseq=str(templongseq[:endfinalseq+1])
+                    #log.debug(["final seq",finalseq,curmatstar,endfinalseq+1])
 
-                    log.debug(["final seq",finalseq,curmatstar,endfinalseq+1])
-                    startmatstar=int(finalseq.index(curmatstar))
-                    endmatstar=int(startmatstar+len(curmatstar)-1)
-                    log.debug(['coor',startmatstar,endmatstar,startmatstarlong,endmatstarlong])
+                    ### CAVH
+                    #Look for mir in final seq:
+                    startmirfinal = int(finalseq.find(curmatseq))
+                    endmirfinal = int(startmirfinal + len(curmatseq) - 1)
+                    subsetnomir = finalseq[endmirfinal:]
+                    indexupdate = finalseq.find(subsetnomir)
+                    #Look mirstar in final seq
+                    startmirstarfinal = subsetnomir.find(curmatstar)
+                    endmirstarfinal = int(startmirstarfinal + len(curmatstar) - 1)
+                    #update coordinates
+                    startmat=startmirfinal
+                    endmat=endmirfinal
+                    startmatstar = startmirstarfinal + indexupdate
+                    endmatstar = endmirstarfinal + indexupdate
+                    #startmatstar=int(finalseq.find(curmatstar))
+                    #endmatstar=int(startmatstar+len(curmatstar)-1)
+                    #CAVH
+                    log.debug(['coor',startmat, endmat, startmatstar,endmatstar])
+                    #CAVH: Additional filters after correction and position:
+                    # Calculate MFE on final hairpin
+                    # filter those which reported > -10 MFE.
+                    # Measure long hairpins
+                    # Previous evaluations:
+                    (structure, mfe, loopsize, length_precursor) = evaluate_final_hairpin(finalseq, startmat, endmat, startmatstar, endmatstar, resprecid)
+                    #if startmatstar > endmat and (startmatstar != -1) and (endmat != -1):
+                    #    loopsize = abs(startmatstar - endmat)
+                    #elif startmatstar<endmat and (startmatstar != -1) and (endmat != -1):
+                    #    loopsize = abs(endmatstar - startmat)
 
-                    if star and nstar and  startmatstar!=-1 and endmatstar!=-1 and startmatstar>endmat:
+                    if mfe > -10:
+                        startmat=0
+                        endmat=0
+                        startmatstar=0
+                        endmatstar=0
+                        finalseq=mat1seq
+                        list1matcoor.append("NULL")#mat original/here no mir
+                        list1matcoor.append("NULL")#matstarID/here no mir* found
+                        list1matcoor.append(startmat)
+                        list1matcoor.append(endmat)
+                        list1matcoor.append(startmatstar)
+                        list1matcoor.append(endmatstar)
+                        startmat=0
+                        endmat=0
+                        startmatstar=0
+                        endmatstar=0
+                        listhighmfe.append(resprecid)
+                        break
+                    if length_precursor > 200:
+                        startmat=0
+                        endmat=0
+                        startmatstar=0
+                        endmatstar=0
+                        finalseq=mat1seq
+                        list1matcoor.append("NULL")#mat original/here no mir
+                        list1matcoor.append("NULL")#matstarID/here no mir* found
+                        list1matcoor.append(startmat)
+                        list1matcoor.append(endmat)
+                        list1matcoor.append(startmatstar)
+                        list1matcoor.append(endmatstar)
+                        startmat=0
+                        endmat=0
+                        startmatstar=0
+                        endmatstar=0
+                        listlonghairpin.append(resprecid)
+                        break
+                    if loopsize <= 1:
+                        startmat=0
+                        endmat=0
+                        startmatstar=0
+                        endmatstar=0
+                        finalseq=mat1seq
+                        list1matcoor.append("NULL")#mat original/here no mir
+                        list1matcoor.append("NULL")#matstarID/here no mir* found
+                        list1matcoor.append(startmat)
+                        list1matcoor.append(endmat)
+                        list1matcoor.append(startmatstar)
+                        list1matcoor.append(endmatstar)
+                        startmat=0
+                        endmat=0
+                        startmatstar=0
+                        endmatstar=0
+                        listremovenoloop.append(resprecid)
+                        break
+
+                    if star and nstar and startmatstar!=-1 and endmatstar!=-1 and startmatstar>endmat and loopsize > 1:
                         list1matcoor.append(curmatID.strip())#mat original
                         list1matcoor.append(curmatsplit[1].strip())#matstarID
                         list1matcoor.append(startmat)
@@ -3880,7 +3795,7 @@ def sublist(filename):
                         endmatstar=0
                         break
 
-                    elif star and nstar and  startmatstar!=-1 and endmatstar!=-1 and startmatstar<endmat:#to put them in order
+                    elif star and nstar and startmatstar!=-1 and endmatstar!=-1 and startmatstar<endmat and loopsize > 1:#to put them in order
                         list1matcoor.append(curmatsplit[1].strip())#matstarID
                         list1matcoor.append(curmatID.strip())#mat original
                         list1matcoor.append(startmatstar)
@@ -3895,9 +3810,10 @@ def sublist(filename):
                         endmatstar=0
                         break
 
+                    # Here is not possible to calculate the loop
                     elif (not star and nstar) or startmatstar==-1 or endmatstar==-1:
-                        startmat=int(mat1seq.index(curmatseq))
-                        endmat=startmat+len(curmatseq)-1
+                        startmat=int(mat1seq.find(curmatseq))
+                        endmat=(startmat+len(curmatseq))-1
                         finalseq=mat1seq
                         startmstar=0
                         endmatstar=len(mat1seq)-1
@@ -3946,10 +3862,17 @@ def sublist(filename):
             mk=mk+1
             r=0
 
+            #for n in range(mk+1,int(len(listmatcoor)/7)):
             for n in range(mk+1,int(len(listmatcoor)/7)+1):
                 with open(outdir+filename.strip()+"-Final.anc","a") as anchorcoorfile:
-                    anchorcoorfile.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+3])+" "+str(listmatcoor[mi+10+r])+" "+str(22)+" "+str(1)+"\n")
-                    anchorcoorfile.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+5])+" "+str(listmatcoor[mi+12+r])+" "+str(22)+" "+str(1)+"\n")
+                    if listmatcoor[mi+3] == -1 or listmatcoor[mi+10+r] == -1 or listmatcoor[mi+3] == 0 or listmatcoor[mi+10+r] == 0:
+                        continue
+                    else:
+                        anchorcoorfile.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+3]+1)+" "+str(listmatcoor[mi+10+r]+1)+" "+str(22)+" "+str(1)+"\n")
+                    if listmatcoor[mi+5] == -1 or listmatcoor[mi+12+r] == -1 or listmatcoor[mi+5] == 0 or listmatcoor[mi+12+r] == 0:
+                        continue
+                    else:
+                        anchorcoorfile.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+5]+1)+" "+str(listmatcoor[mi+12+r]+1)+" "+str(22)+" "+str(1)+"\n")
                 r=r+7
 
             mi=mi+7
@@ -3962,7 +3885,7 @@ def sublist(filename):
         if matrdir:
             fs=os.environ["DIALIGN2_DIR"]=matrdir
             log.debug(matrdir)
-        f1=os.popen("dialign2-2 -n -fa  "+outdir+filename.strip()+'-Final.fasta')
+        f1=os.popen("dialign2-2 -n -anc -fa "+outdir+filename.strip()+'-Final.fasta')
         log.debug(f1)
         f1.close()
 
@@ -4015,11 +3938,11 @@ def sublist(filename):
                 ndhalfsum=ndhalfgaps+ndhalfsum
                 numofseqs=numofseqs+1
             log.debug([sthalfsum,ndhalfsum,totalstnucnum,totalndnucnum])
-
+            # CAVH: Here calculated the average of nt on left side of align (stnucavg) and on the right side (ndnucavg) on the alignment
             stnucavg=totalstnucnum/numofseqs
             ndnucavg=totalndnucnum/numofseqs
             alignment=AlignIO.read(outdir+filename.strip()+'.stk',"stockholm")
-
+            #CAVH: Here iterate again but with calculated average scores
             for record in alignment:
                 lenseq=len(str(record.seq))
                 seq=str(record.seq)
@@ -4100,6 +4023,7 @@ def sublist(filename):
                 mk=mk+1
                 r=0
                 for n in range(mk+1,int(len(listmatcoor)/7)+1):
+                #for n in range(mk+1,int(len(listmatcoor)/7)):
                     with open(outdir+filename.strip()+"-corrected.anc","a") as anchorcoorfilecorrected:
                         anchorcoorfilecorrected.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+3])+" "+str(listmatcoor[mi+10+r])+" "+str(22)+" "+str(1)+"\n")
                         anchorcoorfilecorrected.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+5])+" "+str(listmatcoor[mi+12+r])+" "+str(22)+" "+str(1)+"\n")
@@ -4113,7 +4037,7 @@ def sublist(filename):
             finalstkcorrected.write('# STOCKHOLM 1.0\n')
             if matrdir:
                 fe=os.environ["DIALIGN2_DIR"]=matrdir
-            f11=os.popen("dialign2-2 -n -fa  "+outdir+filename.strip()+'-corrected.fasta')
+            f11=os.popen("dialign2-2 -n -anc -fa  "+outdir+filename.strip()+'-corrected.fasta')
             f11.close()
 
             doalifold(outdir+filename.strip()+"-corrected.fa",outdir)
@@ -4141,8 +4065,8 @@ def sublist(filename):
 
         else:
             if os.path.isfile(outdir+filename.strip()+'-Final.fa'):
-                f3=os.popen("rm "+outdir+filename.strip()+"-Final.fa")
-                f3.close()
+                #f3=os.popen("rm "+outdir+filename.strip()+"-Final.fa")
+                #f3.close()
                 NewShanon=CalShanon(outdir+filename.strip()+'.stk')
                 log.debug(["stk file studied is: "+outdir+filename.strip()+'.stk'])
                 log.debug(["final.fa exists",NewShanon])
@@ -4212,7 +4136,7 @@ def sublist(filename):
                 summaryfile.write("#Precursors without annotated mature; Successfully predicted mature---------------------------\n")
                 tempcountsucnomat=0
                 for k in range(0,len(listnomat)):
-                    if listnomat[k] not in listnomatbroken and listnomat[k] not in listnomatscore:
+                    if listnomat[k] not in listnomatbroken and listnomat[k] not in listnomatscore and listnomat[k] not in listnomatN:
                         tempcountsucnomat=tempcountsucnomat+1
                         summaryfile.write(str(listnomat[k].strip())+"\n")
 
@@ -4240,7 +4164,7 @@ def sublist(filename):
                     summaryfile.write("--->NO Precursors without annotated mature; no similar mature\n")
 
             else:
-                summaryfile.write("--->All precurssors have annotated matures\n")
+                summaryfile.write("--->All precursors have annotated matures\n")
 
             summaryfile.write("\n")
             summaryfile.write("---------------------------Original precursors totally removed ----------------------------\n")
@@ -4250,11 +4174,56 @@ def sublist(filename):
                     if i%2==0:
                         tempsplit=listofboth[i].split()
                         summaryfile.write(str(tempsplit[1].strip())+"\n")
-
+            elif len(listnomatN)>0:
+                for j in range(0, len(listnomatN)):
+                    summaryfile.write(str(listnomatN[j].strip()) + "\n")
+            elif len(listremovenoloop)>0:
+                for k in range(0, len(listremovenoloop)):
+                    summaryfile.write(str(listremovenoloop[k].strip()) + "\n")
+            elif len(listhighmfe)>0:
+                for k in range(0, len(listhighmfe)):
+                    summaryfile.write(str(listhighmfe[k].strip()) + "\n")
+            elif len(listlonghairpin)>0:
+                for k in range(0, len(listlonghairpin)):
+                    summaryfile.write(str(listlonghairpin[k].strip()) + "\n")
             else:
                 summaryfile.write("---> NO Original precursors totally removed ----------------------------\n")
 
             summaryfile.write("\n")
+            summaryfile.write("#Precursors without loop regions (<= 1 nt)---------------------------\n")
+            if len(listremovenoloop)>0:
+                for j in range(0, len(listremovenoloop)):
+                    summaryfile.write(str(listremovenoloop[j].strip()) + "\n")
+            else:
+                summaryfile.write("---> All precursors reported a valid loop region ----------------------------\n")
+
+            summaryfile.write("\n")
+            summaryfile.write("# Precursors with high N content---------------------------\n")
+            if len(listnomatN)>0:
+                for j in range(0, len(listnomatN)):
+                    summaryfile.write(str(listnomatN[j].strip()) + "\n")
+            else:
+                summaryfile.write("---> All precursors reported valid nucleotide composition with N content > 60 % ----------------------------\n")
+
+            summaryfile.write("\n")
+            summaryfile.write("# Precursors with high MFE---------------------------\n")
+            if len(listhighmfe)>0:
+                for j in range(0, len(listhighmfe)):
+                    summaryfile.write(str(listhighmfe[j].strip()) + "\n")
+            else:
+                summaryfile.write("---> All precursors reported a valid MFE range ----------------------------\n")
+
+            summaryfile.write("\n")
+            summaryfile.write("# Precursors with reported precursor size > 200 nt---------------------------\n")
+            if len(listlonghairpin)>0:
+                for j in range(0, len(listlonghairpin)):
+                    summaryfile.write(str(listlonghairpin[j].strip()) + "\n")
+            else:
+                summaryfile.write("---> All precursors reported a valid size ----------------------------\n")
+
+            summaryfile.write("\n")
+
+
             summaryfile.write("---------------------------Precursors without given genome file(s)----------------------------\n")
 
             if len(listnogenomes)>0:
@@ -4277,11 +4246,11 @@ def sublist(filename):
 
         #Total
         Processed=(len(listofold)/2)+(len(list2mat)/3)+(len(listofoldloop)/2)+(len(listofnew)/2)+(len(listofnewloop)/2)#+len(listnomat)
-        Removed=len(listofboth)/2
+        Removed=(len(listofboth)/2 + len(listnomatN) + len(listremovenoloop) + len(listhighmfe) + len(listlonghairpin))
         TotalnumberofSequences=Processed+Removed
         #no mats/predicted-no prediction
         predicted=tempcountsucnomat
-        noprediction=len(listnomat)-tempcountsucnomat
+        noprediction=len(listnomat)-tempcountsucnomat-len(listnomatN)-len(listremovenoloop)-len(listhighmfe)-len(listlonghairpin)
 
         #Corrected/notcorrected
         flippednotcorrected=int((len(listofnew)/2))+int((len(listofnewloop)/2))-int(countcorrected)
@@ -4348,105 +4317,108 @@ def sublist(filename):
         sumall.append(newshan[4])
         sumall.append(oldshan[4])
 
-        ind = np.arange(N)    # the x locations for the groups
-        width = 0.35       # the width of the bars: can also be len(x) sequence
+        #ind = np.arange(N)    # the x locations for the groups
+        #width = 0.35       # the width of the bars: can also be len(x) sequence
 
-        pdf, ax = plt.subplots()
+        ### Plot
+        #pdf, ax = plt.subplots()
 
-        if Totalrem[0]==0:
-            Totalrem[0]=0.15
-            p1 = ax.bar(ind+width, Totalrem, width, color='#FFFFFF',edgecolor='black')#,tick_label='Total')
-        else:
-            p1 = ax.bar(ind+width, Totalrem, width, color='#FF0000')#,tick_label='Total')
-        if Totalproc[0]==0:
-            Totalproc[0]=0.15
-            p2 = ax.bar(ind+width*2, Totalproc, width, color='#FFFFFF',edgecolor='black')
-        else:
-            p2 = ax.bar(ind+width*2, Totalproc, width,bottom=0,color='#BB0000')#,'grey','blue','yellow','lime'])
+        #if Totalrem[0]==0:
+        #    Totalrem[0]=0.15
+        #    p1 = ax.bar(ind+width, Totalrem, width, color='#FFFFFF',edgecolor='black')#,tick_label='Total')
+        #else:
+        #    p1 = ax.bar(ind+width, Totalrem, width, color='#FF0000')#,tick_label='Total')
+        #if Totalproc[0]==0:
+        #    Totalproc[0]=0.15
+        #    p2 = ax.bar(ind+width*2, Totalproc, width, color='#FFFFFF',edgecolor='black')
+        #else:
+        #    p2 = ax.bar(ind+width*2, Totalproc, width,bottom=0,color='#BB0000')#,'grey','blue','yellow','lime'])
 
         #COL2/seq-distribution
-        if seq0mat[1]==0:
-            seq0mat[1]=0.15
-            p3 = ax.bar(ind+width, seq0mat, width,color='#FFFFFF',edgecolor='black')
-        else:
-            p3 = ax.bar(ind+width, seq0mat, width,color='#660000')
+        #if seq0mat[1]==0:
+        #    seq0mat[1]=0.15
+        #    p3 = ax.bar(ind+width, seq0mat, width,color='#FFFFFF',edgecolor='black')
+        #else:
+        #    p3 = ax.bar(ind+width, seq0mat, width,color='#660000')
 
-        if seq1mat[1]==0:
-            seq1mat[1]=0.15
-            p4 = ax.bar(ind+width*2, seq1mat, width,bottom=0,color='#FFFFFF',edgecolor='black')
-        else:
-            p4 = ax.bar(ind+width*2, seq1mat, width,bottom=0,color='#669900')#,tick_label='Sequences\n Distribution')
+        #if seq1mat[1]==0:
+        #    seq1mat[1]=0.15
+        #    p4 = ax.bar(ind+width*2, seq1mat, width,bottom=0,color='#FFFFFF',edgecolor='black')
+        #else:
+        #    p4 = ax.bar(ind+width*2, seq1mat, width,bottom=0,color='#669900')#,tick_label='Sequences\n Distribution')
 
-        if seq2mat[1]==0:
-            seq2mat[1]=0.15
-            p5 = ax.bar(ind+width*3, seq2mat, width,bottom=0,color='#FFFFFF',edgecolor='black')
-        else:
-            p5 = ax.bar(ind+width*3, seq2mat, width,bottom=0,color='#996600')
+        #if seq2mat[1]==0:
+        #    seq2mat[1]=0.15
+        #    p5 = ax.bar(ind+width*3, seq2mat, width,bottom=0,color='#FFFFFF',edgecolor='black')
+        #else:
+        #    p5 = ax.bar(ind+width*3, seq2mat, width,bottom=0,color='#996600')
 
         #col3/flipped
-        if flippednotcorr[2]==0:
-            flippednotcorr[2]=0.15
-            p6 = ax.bar(ind+width*2, flippednotcorr, width,color='#FFFFFF',edgecolor='black')#,tick_label='Changed\n sequences')
-        else:
-            p6 = ax.bar(ind+width*2, flippednotcorr, width,color='#0000FF')#,tick_label='Changed\n sequences')
+        #if flippednotcorr[2]==0:
+        #    flippednotcorr[2]=0.15
+        #    p6 = ax.bar(ind+width*2, flippednotcorr, width,color='#FFFFFF',edgecolor='black')#,tick_label='Changed\n sequences')
+        #else:
+        #    p6 = ax.bar(ind+width*2, flippednotcorr, width,color='#0000FF')#,tick_label='Changed\n sequences')
 
-        if flippedcorr[2]==0:
-            flippedcorr[2]=0.15
-            p7 = ax.bar(ind+width*3, flippedcorr, width,bottom=0,color='#FFFFFF',edgecolor='black')
-        else:
-            p7 = ax.bar(ind+width*3, flippedcorr, width,bottom=0,color='#00CCFF')
+        #if flippedcorr[2]==0:
+        #    flippedcorr[2]=0.15
+        #    p7 = ax.bar(ind+width*3, flippedcorr, width,bottom=0,color='#FFFFFF',edgecolor='black')
+        #else:
+        #    p7 = ax.bar(ind+width*3, flippedcorr, width,bottom=0,color='#00CCFF')
 
         #col4/nomats
-        if Nomatspred[3]==0:
-            Nomatspred[3]=0.15
-            p8 = ax.bar(ind+width*2, Nomatspred, width,color='#FFFFFF',edgecolor='black')#,tick_label='Precursors\n without \n mature(s)')
-        else:
-            p8 = ax.bar(ind+width*2, Nomatspred, width,color=['#7D7D7D'])#,tick_label='Precursors\n without \n mature(s)')
+        #if Nomatspred[3]==0:
+        #    Nomatspred[3]=0.15
+        #    p8 = ax.bar(ind+width*2, Nomatspred, width,color='#FFFFFF',edgecolor='black')#,tick_label='Precursors\n without \n mature(s)')
+        #else:
+        #    p8 = ax.bar(ind+width*2, Nomatspred, width,color=['#7D7D7D'])#,tick_label='Precursors\n without \n mature(s)')
 
-        if Nomatsnotpred[3]==0:
-            Nomatsnotpred[3]=0.15
-            p9 = ax.bar(ind+width*3, Nomatsnotpred, width,bottom=0,color='#FFFFFF',edgecolor='black')
-        else:
-            p9 = ax.bar(ind+width*3, Nomatsnotpred, width,bottom=0,color='#0D0D0D')#,tick_label='Total')
+        #if Nomatsnotpred[3]==0:
+        #    Nomatsnotpred[3]=0.15
+        #    p9 = ax.bar(ind+width*3, Nomatsnotpred, width,bottom=0,color='#FFFFFF',edgecolor='black')
+        #else:
+        #    p9 = ax.bar(ind+width*3, Nomatsnotpred, width,bottom=0,color='#0D0D0D')#,tick_label='Total')
 
         #col5/shanon
-        if newshan[4]==0:
-            newshan[4]=0.15
-            p10 = ax.bar(ind+width*2, newshan, width,color='#FFFFFF',edgecolor='black')
-        else:
-            p10 = ax.bar(ind+width*2, newshan, width,color='#003300')#,tick_label='Alignment\n Entropy')
+        #if newshan[4]==0:
+        #    newshan[4]=0.15
+        #    p10 = ax.bar(ind+width*2, newshan, width,color='#FFFFFF',edgecolor='black')
+        #else:
+        #    p10 = ax.bar(ind+width*2, newshan, width,color='#003300')#,tick_label='Alignment\n Entropy')
 
-        if oldshan[4]==0:
-            oldshan[4]=0.15
-            p11 = ax.bar(ind+width*3, oldshan, width,bottom=0,color='#FFFFFF',edgecolor='black')
-        else:
-            p11 = ax.bar(ind+width*3, oldshan, width,bottom=0,color='#009900')
+        #if oldshan[4]==0:
+        #    oldshan[4]=0.15
+        #    p11 = ax.bar(ind+width*3, oldshan, width,bottom=0,color='#FFFFFF',edgecolor='black')
+        #else:
+        #   p11 = ax.bar(ind+width*3, oldshan, width,bottom=0,color='#009900')
 
-        ax.set_title('Statistics for file (family)-'+str(filename).strip())
-        ax.set_xticks(ind + width+(width))
-        ax.set_ylabel('Number / Entropy')
-        ax.set_title('Statistics for file (family)-'+str(filename).strip())
-        ax.set_xticklabels(('Total', 'Sequences\n Distribution', 'Changed\n sequences', 'Precursors\n without \n mature(s)', 'Alignment\n Entropy'))
-        if max(sumall)>25:
-                offset=int(max(sumall)/25)
-                log.debug(['maxsum',max(sumall),sumall])
-        else:
-                offset=1
+        #ax.set_title('Statistics for file (family)-'+str(filename).strip())
+        #ax.set_xticks(ind + width+(width))
+        #ax.set_ylabel('Number / Entropy')
+        #ax.set_title('Statistics for file (family)-'+str(filename).strip())
+        #ax.set_xticklabels(('Total', 'Sequences\n Distribution', 'Changed\n sequences', 'Precursors\n without \n mature(s)', 'Alignment\n Entropy'))
+        #if max(sumall)>25:
+        #        offset=int(max(sumall)/25)
+        #        log.debug(['maxsum',max(sumall),sumall])
+        #else:
+        #        offset=1
 
-        ax.set_yticks(np.arange(0, max(sumall)+5, offset))
-        ax.legend((p1[0], p2[0],p3[1],p4[1],p5[2],p6[2],p7[3],p8[3],p9[3],p10[4],p11[4]), ('Removed', 'Processed *','Without mature','With 1 mature','With 2 matures','Changed Not Corrected','Corrected misaligned','Predicted','No mature Predicted','New Entropy','Old Entropy'))#,title="White bars refer to zero/doesn't exist")
+        #ax.set_yticks(np.arange(0, max(sumall)+5, offset))
+        #ax.legend((p1[0], p2[0],p3[1],p4[1],p5[2],p6[2],p7[3],p8[3],p9[3],p10[4],p11[4]), ('Removed', 'Processed *','Without mature','With 1 mature','With 2 matures','Changed Not Corrected','Corrected misaligned','Predicted','No mature Predicted','New Entropy','Old Entropy'))#,title="White bars refer to zero/doesn't exist")
 
-        pdf.savefig(outdir+filename.strip()+'statistics.pdf')
-        plt.close('all')
+        #pdf.savefig(outdir+filename.strip()+'statistics.pdf')
+        #plt.close('all')
+
         with open(outdir+filename.strip()+"-summ.txt","a") as summaryfile:
             summaryfile.write("---------------------------Results In Numbers----------------------------\n")
             summaryfile.write("*Number of remained precursors= "+str(int((len(listofold)/2)+(len(list2mat)/3)))+"\n")
             summaryfile.write("*Number of remained precursors with bad positioned matures= "+str(int((len(listofoldloop)/2)))+"\n")
             summaryfile.write("*Number of flipped(changed) precursors= "+str(int((len(listofnew)/2)))+"\n")
             summaryfile.write("*Number of flipped(changed) precursors with bad positioned matures= "+str(int((len(listofnewloop)/2)))+"\n")
-            summaryfile.write("*Number of removed precursors= "+str(int(len(listofboth)/2))+"\n")
+            #summaryfile.write("*Number of removed precursors= "+str(int(len(listofboth)/2))+"\n")
+            summaryfile.write("*Number of removed precursors= "+str(int(Removed))+"\n")
             summaryfile.write("*Number of precursors without a given matures= "+str(int(len(listnomat)))+"\n")
-            summaryfile.write("*Number of precursors with successfully predicted matures= "+str(int(len(listnomat)-len(listremovedbroken)-len(listremovedscore)))+"\n")
+            summaryfile.write("*Number of precursors with successfully predicted matures= "+str(int(len(listnomat)-len(listremovedbroken)-len(listremovedscore)-len(listremovedN)-len(listremovenoloop)-len(listhighmfe)-len(listlonghairpin)))+"\n")
             summaryfile.write("*Number of precursors without a given genome file= "+str(int(len(listnogenomes)))+"\n")
             summaryfile.write("*Number of precursors not found in their given genomes= "+str(int(len(listnotingenome)))+"\n")
             summaryfile.write("---------------------------Numbers Used For The Graph----------------------------\n")
@@ -4484,7 +4456,7 @@ def sublist(filename):
 
         listsuccpred=[]
         for k in range(0,len(listnomat)):
-            if listnomat[k] not in listnomatbroken and listnomat[k] not in listnomatscore:
+            if listnomat[k] not in listnomatbroken and listnomat[k] not in listnomatscore and listnomat[k] not in listnomatN and listnomat[k] not in listremovenoloop and listnomat[k] not in listhighmfe and listnomat[k] not in listlonghairpin:
                 listsuccpred.append(str(listnomat[k].strip()))
 
         listremovedjson=[]
@@ -4492,14 +4464,21 @@ def sublist(filename):
             if i%2==0:
                 tempsplit=listofboth[i].split()
                 listremovedjson.append(str(tempsplit[1].strip()))
-
+        for i in range(0,len(listnomatN)):
+            listremovedjson.append(listnomatN[i].strip())
+        for j in range(0, len(listremovenoloop)):
+            listremovedjson.append(listremovenoloop[j].strip())
+        for k in range(0, len(listhighmfe)):
+            listremovedjson.append(listhighmfe[k].strip())
+        for k in range(0, len(listlonghairpin)):
+            listremovedjson.append(listlonghairpin[k].strip())
         data = {
             "Processed":int(Processed),
             "Precursors totally removed":{
                 "Number":int(len(listremovedjson)),
                 "IDs":listremovedjson,
             },
-            "Remained precursors":int((len(listofold)/2)+(len(list2mat)/3)),
+            "Remained precursors":int((len(listofold)/2)+(len(list2mat)/3)-len(listnomatN)-len(listremovenoloop)-len(listhighmfe)-len(listlonghairpin)),
             "Remained precursors with bad positioned matures":{
                 "Number":int(len(listofoldloopjson)),#int((len(listofoldloop)/2)),
                 "IDs":listofoldloopjson,
@@ -4539,6 +4518,22 @@ def sublist(filename):
             "Precursors without annotated and without predicted mature":{
                 "Number":int(len(listnomatscore)),
                 "IDs":listnomatscore,
+            },
+            "Precursors with high N content":{
+                "Number": int(len(listnomatN)),
+                "IDs": listnomatN,
+            },
+            "Precursors without loop":{
+                "Number": int(len(listremovenoloop)),
+                "IDs": listremovenoloop,
+            },
+            "Precursors with high MFE":{
+                "Number": int(len(listhighmfe)),
+                "IDs": listhighmfe,
+            },
+            "Precursors with long precursors":{
+                "Number": int(len(listlonghairpin)),
+                "IDs": listlonghairpin,
             },
             "Precursors without a given genome":{
                 "Number":int(len(listnogenomes)),
@@ -4590,6 +4585,7 @@ def sublist(filename):
         del listofboth[:]#add the id, that shouldn't be added to the new file
         del listremovedbroken[:]
         del listremovedscore[:]
+        del listremovedN[:]
         del listnomat[:]
         del list2mat[:]
         del listmatcoor[:]
@@ -4598,30 +4594,17 @@ def sublist(filename):
 
         familyfileres.close()
         log.debug("done")
-        log.debug([listofold,listofnew,listofnewloop,listofoldloop,listremovedbroken,listremovedscore,listofmirstar])
+        log.debug([listofold,listofnew,listofnewloop,listofoldloop,listremovedbroken,listremovedscore,listremovedN,listofmirstar])
         log.debug(list2mat)
         if os.path.isfile(outdir+filename.strip()+"-res.fa"):
-            fr1=os.popen("rm "+outdir+filename.strip()+"-res.fa")
+            os.popen("rm "+outdir+filename.strip()+"-res.fa")
 
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
         )
         log.error(logid+''.join(tbe.format()))
-
-
-def openfile(f):
-    logid = scriptname+'.openfile: '
-    try:
-        return open(f,'r') if not '.gz' in f[-4:] else gzip.open(f,'rt')
-    except Exception as err:
-        exc_type, exc_value, exc_tb = sys.exc_info()
-        tbe = tb.TracebackException(
-            exc_type, exc_value, exc_tb,
-        )
-        log.error(logid+''.join(tbe.format()))
-
 
 def parseargs():
     parser = argparse.ArgumentParser(description='MIRfix automatically curates miRNA datasets by improving alignments of their precursors, the consistency of the annotation of mature miR and miR* sequence, and the phylogenetic coverage. MIRfix produces alignments that are comparable across families and sets the stage for improved homology search as well as quantitative analyses.')
@@ -4634,7 +4617,8 @@ def parseargs():
     parser.add_argument("-d", "--maturedir", type=str, default='', help='Directory of matures')
     parser.add_argument("-o", "--outdir", type=str, default='', help='Directory for output')
     parser.add_argument("-e", "--extension", type=int, default=10, help='Extension of nucleotides for precursor cutting')
-    parser.add_argument("--loglevel", type=str, default='WARNING', choices=['WARNING','ERROR','INFO','DEBUG'], help="Set log level")
+    parser.add_argument("-l", "--logdir", type=str, default='LOGS', help='Directory to write logfiles to')
+    parser.add_argument("--loglevel", type=str, default='WARNING', choices=['WARNING','ERROR','INFO','DEBUG','CRITICAL'], help="Set log level")
 
     if len(sys.argv)==1:
         parser.print_help(sys.stderr)
@@ -4642,44 +4626,65 @@ def parseargs():
 
     return parser.parse_args()
 
+
+def main(args):
+    try:
+
+        #  Logging configuration
+        logdir = args.logdir
+        logfile = str.join(os.sep,[os.path.abspath(logdir),scriptname+'.log'])
+
+        makelogdir(logdir)
+        makelogfile(logfile)
+
+        #  Multiprocessing with spawn
+        nthreads = args.cores or 2
+        multiprocessing.set_start_method('spawn')  # set multiprocessing start method to safe spawn
+        pool = multiprocessing.Pool(processes=nthreads, maxtasksperchild=1)
+
+        queue = multiprocessing.Manager().Queue(-1)
+        listener = multiprocessing.Process(target=listener_process, args=(queue, listener_configurer, logfile, args.loglevel))
+        listener.start()
+
+        worker_configurer(queue, args.loglevel)
+
+        log.info(logid+'Running '+scriptname+' on '+str(args.cores)+' cores.')
+        log.info(logid+'CLI: '+sys.argv[0]+' '+'{}'.format(' '.join( [shlex.quote(s) for s in sys.argv[1:]] )))
+
+        lfams = []
+        with openfile(args.families) as filelist:
+            for line in filelist:
+                lfams.append(line.strip())
+
+        for fam in lfams:
+            #sublist(queue, fam, args)
+            pool.apply_async(sublist, args=(queue, worker_configurer, args.loglevel, fam, args))
+        pool.close()
+        pool.join()
+        queue.put_nowait(None)
+        listener.join()
+
+    except Exception:
+        exc_type, exc_value, exc_tb = sys.exc_info()
+        tbe = tb.TracebackException(
+            exc_type, exc_value, exc_tb,
+        )
+        log.error(logid+''.join(tbe.format()))
+
 ##############################MAIN##############################
 
 if __name__ == '__main__':
 
     logid = scriptname+'.main: '
-
     try:
-        global args
         args = parseargs()
-        log = setup_multiprocess_logger(name=logid, log_file='logs/'+scriptname, logformat='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M', level=args.loglevel)
-        streamlog = setup_multiprocess_logger(name='', log_file='stderr', logformat='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M', level=args.loglevel)
 
-        log.info(logid+'Running '+scriptname+' on '+str(args.cores)+' cores.')
-        log.info(logid+'CLI: '+str(sys.argv[0]) + ' '.join( [shlex.quote(s) for s in sys.argv[1:]] ))
-
-        nthreads=args.cores
-        lfams = []
-
-        with openfile(args.families) as filelist:
-            for line in filelist:
-                lfams.append(line.strip())
-
-        log.debug(logid+'Families to process: '+str(lfams))
-
-        outd=args.outdir
-
-        pool = multiprocessing.Pool(processes=nthreads, maxtasksperchild=1)
-
-        #find_executable('clustalw2') or sys.exit('Please install clustalw2 to run this')
+        # find_executable('clustalw2') or sys.exit('Please install clustalw2 to run this')
         find_executable('dialign2-2') or sys.exit('Please install dialign2-2 to run this')
 
-        for fam in lfams:
-            pool.apply_async(sublist, args=(fam,))
+        main(args)
 
-        pool.close()
-        pool.join()
-
-    except Exception as err:
+    except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
             exc_type, exc_value, exc_tb,
