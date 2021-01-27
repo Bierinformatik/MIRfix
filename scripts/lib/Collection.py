@@ -578,7 +578,7 @@ def define_best_pair(pairs, distances_loop, startprecursor,
         return (coor1, coor2, correctfinalseq)
     except Exception as err:
         log.error("ERROR: mir or mir* did not fit into the precursor limits", [all_distances_sorted], startprecursor, endprecursor)
-        sys.exit()
+        #sys.exit()
 
 def find_positions(longseq, mat1seq, curmatseq, curmatstar, flanking):
     # Features sequences
@@ -643,7 +643,7 @@ def evaluate_final_hairpin(precursor, startmir, endmir, startmirstart, endmirsta
     loop_size = measure_loop(startmir, endmir, startmirstart, endmirstart)
     #Size of final precursor
     length_precursor = len(str(precursor))
-    return (structure, mfe, loop_size, length_precursor) 
+    return (structure, mfe, loop_size, length_precursor)
 
 #Utils
 def removekey(d, key):

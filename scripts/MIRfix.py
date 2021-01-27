@@ -3421,13 +3421,17 @@ def sublist(queue, configurer, level, filename, args):
                             curmatstar = sequence
                             #log.debug(logid+str(["heres new mir*",mat2seq,startmatstar,endmatstar,curmatseq]))
                     (startmat, startmatstar, finalseq) = find_positions(mat1seq, mat1seq,curmatseq, curmatstar,userflanking)
-                    endmat = startmat+len(curmatseq)-1
-                    endmatstar = (startmatstar+len(curmatstar))-1
+                    #endmat = startmat+len(curmatseq)-1
+                    #endmatstar = (startmatstar+len(curmatstar))-1
                     #CAVH: Because was find(), check that startmat, endmat, startmatstar, endmatstar have values != None
-                    if startmat == None or endmat == None or startmatstar == None or endmatstar == None:
+                    log.debug(logid+str([startmat, startmatstar, finalseq]))
+                    if startmat == None or startmatstar == None:
+                    #if startmat == None or endmat == None or startmatstar == None or endmatstar == None:
                         log.error(logid+'Not possible to locate the mapping referred mir or mir* on the mature file for '+resprecid+' with '+mat2seq)
                         #sys.exit()
 
+                    endmat = startmat+len(curmatseq)-1
+                    endmatstar = (startmatstar+len(curmatstar))-1
                     log.debug(logid+str(["heres new",mat2seq,finalseq,startmat,endmat,startmatstar,endmatstar,curmatseq,curmatstar]))
                     #CAVH: Because was find(), check that startmat, endmat, startmatstar, endmatstar have values != -1
                     #if startmat == -1 or endmat == -1 or startmatstar == -1 or endmatstar == -1:
@@ -3791,7 +3795,7 @@ def sublist(queue, configurer, level, filename, args):
                         endmatstar=0
                         break
 
-                    elif star and nstar and  startmatstar!=-1 and endmatstar!=-1 and startmatstar<endmat and loopsize > 1:#to put them in order
+                    elif star and nstar and startmatstar!=-1 and endmatstar!=-1 and startmatstar<endmat and loopsize > 1:#to put them in order
                         list1matcoor.append(curmatsplit[1].strip())#matstarID
                         list1matcoor.append(curmatID.strip())#mat original
                         list1matcoor.append(startmatstar)
@@ -3858,13 +3862,14 @@ def sublist(queue, configurer, level, filename, args):
             mk=mk+1
             r=0
 
+            #for n in range(mk+1,int(len(listmatcoor)/7)):
             for n in range(mk+1,int(len(listmatcoor)/7)+1):
                 with open(outdir+filename.strip()+"-Final.anc","a") as anchorcoorfile:
-                    if listmatcoor[mi+3] == -1 or listmatcoor[mi+10+r] == -1:
+                    if listmatcoor[mi+3] == -1 or listmatcoor[mi+10+r] == -1 or listmatcoor[mi+3] == 0 or listmatcoor[mi+10+r] == 0:
                         continue
                     else:
                         anchorcoorfile.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+3]+1)+" "+str(listmatcoor[mi+10+r]+1)+" "+str(22)+" "+str(1)+"\n")
-                    if listmatcoor[mi+5] == -1 or listmatcoor[mi+12+r] == -1:
+                    if listmatcoor[mi+5] == -1 or listmatcoor[mi+12+r] == -1 or listmatcoor[mi+5] == 0 or listmatcoor[mi+12+r] == 0:
                         continue
                     else:
                         anchorcoorfile.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+5]+1)+" "+str(listmatcoor[mi+12+r]+1)+" "+str(22)+" "+str(1)+"\n")
@@ -4018,6 +4023,7 @@ def sublist(queue, configurer, level, filename, args):
                 mk=mk+1
                 r=0
                 for n in range(mk+1,int(len(listmatcoor)/7)+1):
+                #for n in range(mk+1,int(len(listmatcoor)/7)):
                     with open(outdir+filename.strip()+"-corrected.anc","a") as anchorcoorfilecorrected:
                         anchorcoorfilecorrected.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+3])+" "+str(listmatcoor[mi+10+r])+" "+str(22)+" "+str(1)+"\n")
                         anchorcoorfilecorrected.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+5])+" "+str(listmatcoor[mi+12+r])+" "+str(22)+" "+str(1)+"\n")
