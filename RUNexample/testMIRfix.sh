@@ -12,7 +12,7 @@ echo "Running MIRfix with ${cores} cores, ${extension}nt extension at ${location
 cp mature.fa maturetest.fa
 cp mapping.txt mappingtest.txt
 
-python2 MIRfix.py ${cores} ${location}/output/ ${location}/Families/ ${location}/list.txt ${location}/genomes_list.txt ${location}/mappingtest.txt ${location}/maturetest.fa ${extension}
+python MIRfix.py -j ${cores} -o ${location}/output/ -i ${location}/Families/ -f ${location}/list.txt -g ${location}/genomes_list.txt -m ${location}/mappingtest.txt -a ${location}/maturetest.fa -e ${extension}
 
 echo "Found "`diff mature.fa maturetest.fa`
 echo "At "`diff mapping.txt mappingtest.txt
