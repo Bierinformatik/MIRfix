@@ -2419,7 +2419,7 @@ def checknomat(precfile,mapfile,matfile,directory,precfilename,listremovedbroken
     logid = scriptname+'.checknomat: '
     try:
         flagnomatexists=False
-        directory=os.path.abspath(directory)
+        directory=os.path.abspath(directory)+"/"
         matIDs=[]
         precnomat=[]
         countnomat=0#count number of precs without mature
