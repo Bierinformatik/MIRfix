@@ -2454,7 +2454,7 @@ def checknomat(precfile,mapfile,matfile,directory,precfilename,listremovedbroken
                 for record in SeqIO.parse(mtf, 'fasta'):
                     if i.strip() in record.description:
                         with open(directory+'tempmat.fa','a') as tempmaturefile:
-                            tempmaturefile.write(">"+record.description+"\n"+str(record.seq.strip())+"\n")
+                            tempmaturefile.write(">"+record.description+"\n"+str(record.seq)+"\n")
 
             for prec in SeqIO.parse(openfile(directory+'nomat-'+precfilename+'.fa'),'fasta'):
                 listofmat=[]
@@ -3899,7 +3899,7 @@ def sublist(queue, configurer, level, filename, args):
                     maxidesc=len('#=GC SS_cons')
 
             for rec in SeqIO.parse(openfile(outdir+filename.strip()+'-Final.fa'),'fasta'):
-                finalstk.write(str(rec.description.strip())+" "*(maxidesc-len(rec.description.strip())+2)+str(rec.seq.strip())+"\n")
+                finalstk.write(str(rec.description.strip())+" "*(maxidesc-len(rec.description.strip())+2)+str(rec.seq)+"\n")
 
             struct=getstructure(outdir+'alifoldtemp.txt')
             f2=os.popen("rm "+outdir+'alifoldtemp.txt')
@@ -4050,7 +4050,7 @@ def sublist(queue, configurer, level, filename, args):
                     maxidesc=len('#=GC SS_cons')
 
             for rec in SeqIO.parse(openfile(outdir+filename.strip()+'-corrected.fa'),'fasta'):
-                finalstkcorrected.write(str(rec.description.strip())+" "*(maxidesc-len(rec.description.strip())+2)+str(rec.seq.strip())+"\n")
+                finalstkcorrected.write(str(rec.description.strip())+" "*(maxidesc-len(rec.description.strip())+2)+str(rec.seq)+"\n")
 
             struct=getstructure(outdir+'alifoldtemp.txt')
             f22=os.popen("rm "+outdir+'alifoldtemp.txt')
