@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 import logging
 import numpy as np
 import heapq
@@ -789,13 +790,12 @@ def makeoutdir(outdir, force):
 
         ## if output directory exists and --force is not specify
         ## stop MIRfix here to prevent errors
-        if os.path.exists( outdir) && !force:
-            log.error( logid+'Output directory already exists! Won\'t override!\nTo override the original output folder, please specify the \'--force\' option.\n')
-            sys.exit( 'Output directory already exists! Won\'t override!\nTo override the original output folder, please specify the \'--force\' option.\n')
+        if os.path.exists( outdir) and not force:
+            sys.exit( 'Error: Output directory already exists! Won\'t override!\nTo override the original output folder, please specify the \'--force\' option.\n')
             
         ## in case --force is specified remove the old output dir
-        if os.path.exists( outdir) && force:
-            os.rmdir( outdir)
+        if os.path.exists( outdir) and force:
+            shutil.rmtree( outdir)
 
         ## create the output directory
         os.makedirs(outdir)
