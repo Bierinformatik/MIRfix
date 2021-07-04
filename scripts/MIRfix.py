@@ -266,7 +266,10 @@ def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop
                 elif xcut>ycut and ycut<=10:#=> 3p and no need to cut, already <=10
                     precseq=precseq
                 elif xcut<ycut and xcut>10:#=> 5p cut at the top
-                    precseq=precseq[spos-10:]
+                    #Calculate remaining portion
+                    region = len(precseq[:spos-10]) #Length region to cut both sides
+                    precseq=precseq[spos-10:len(precseq)-int(region)] #Cut same nt both sides
+                    #precseq=precseq[spos-10:]
                 elif xcut<ycut and xcut<=10:#=> 5p and no need to cut, already <=10
                     precseq=precseq
 
