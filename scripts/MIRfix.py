@@ -230,7 +230,7 @@ def find_precursor_genome(id, precursor, genome, extension, workfolder):
     filesize = os.path.getsize(out_blast)
     minusstrand = False
     if filesize == 0:
-        return (0, 0, chr, minusstrand)
+        return (0, 0, 0, minusstrand)
     else:
         num_lines = sum(1 for line in open(out_blast))
         if num_lines > 1:
