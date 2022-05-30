@@ -328,6 +328,7 @@ def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop
                 elif xcut<ycut and xcut>10:#=> 5p cut at the top
                     precseq=precseq[spos-10:]
                 elif xcut<ycut and xcut==10:#=> 5p and no need to cut, already <=10
+
                     precseq=precseq
                 elif xcut<ycut and xcut<10:#=> 5p and no need to cut, already <=10
                     #Extend to 10 the sequence
@@ -3990,7 +3991,7 @@ def sublist(queue, configurer, level, filename, args):
                     maxidesc=len('#=GC SS_cons')
 
             for rec in SeqIO.parse(openfile(outdir+filename.strip()+'-Final.fa'),'fasta'):
-                finalstk.write(str(rec.description.strip())+" "*(maxidesc-len(rec.description.strip())+2)+str(rec.seq.strip())+"\n")
+                finalstk.write(str(rec.description.strip())+" "*(maxidesc-len(rec.description.strip())+2)+str(rec.seq)+"\n")
 
             struct=getstructure(outdir+'alifoldtemp.txt')
             os.remove(outdir+'alifoldtemp.txt')
@@ -4138,7 +4139,7 @@ def sublist(queue, configurer, level, filename, args):
                     maxidesc=len('#=GC SS_cons')
 
             for rec in SeqIO.parse(openfile(outdir+filename.strip()+'-corrected.fa'),'fasta'):
-                finalstkcorrected.write(str(rec.description.strip())+" "*(maxidesc-len(rec.description.strip())+2)+str(rec.seq.strip())+"\n")
+                finalstkcorrected.write(str(rec.description.strip())+" "*(maxidesc-len(rec.description.strip())+2)+str(rec.seq)+"\n")
 
             struct=getstructure(outdir+'alifoldtemp.txt')
             os.remove(outdir+'alifoldtemp.txt')
