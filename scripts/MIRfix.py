@@ -210,7 +210,7 @@ def extend_sequence(precursor, indexed_genomes, extension, sense, workfolder):
                 new_sequence = get_genome[chr][start-1:end].seq
             else:
                 # Here reverse one
-                new_sequence = get_genome[chr][start-1:end].complement
+                new_sequence = get_genome[chr][start-1:end].reverse.complement.seq
             os.remove(out_blast)
             os.remove(temp_fasta)
             new_sequence=new_sequence.replace("T","U")
@@ -241,11 +241,13 @@ def find_precursor_genome(id, precursor, genome, extension, workfolder):
             fields = first_line.split()
             chr = fields[1]
             start = fields[8]
+            start_genome = int(fields[8])
             end = fields[9]
             if start <= end:
                 strand = 1
             else:
                 start = fields[9]
+                start_genome = int(fields[9])
                 end = fields[8]
                 strand = -1
         # Add additional nt to complete adjacent nt
@@ -259,13 +261,13 @@ def find_precursor_genome(id, precursor, genome, extension, workfolder):
             minusstrand = False
         else:
             # Here reverse one
-            new_sequence = get_genome[chr][start-1:end].complement
+            new_sequence = get_genome[chr][start-1:end].reverse.complement.seq
             minusstrand = True
         os.remove(out_blast)
         os.remove(temp_fasta)
         #new_sequence=new_sequence.replace("T","U")
         #longseq, precind, chr, minusstrand
-        return (new_sequence, 1, chr, minusstrand)
+        return (new_sequence, start_genome, chr, minusstrand)
 
 
 def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, list2mat, listnogenomes, listnotingenome, templong, listgoodnew, indexed_genomes, args):#file name is the family name
@@ -358,17 +360,31 @@ def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop
                     newepos=newx+m-1 #new end position of mature
                     log.debug(["mat= ",matdesc,matseq])
 
-                    filer=openfile(returnlst[2]) #this loop to get the flipped sequence
-                    fread = SeqIO.parse(filer,"fasta")
-
-                    for i in fread:
-                        if i.id==returnlst[1] and minusstrand is False:#
-                            newseq=i.seq[nx:sm]+i.seq[sm:sm+m]+i.seq[em:ny]
-                            newseq1 = newseq
-                        elif i.id==returnlst[1] and minusstrand is True:#minus strand
-                            revgenseq=(i.seq).reverse_complement() #reverse the genomic sequence
-                            newseq=revgenseq[nx:sm]+revgenseq[sm:sm+m]+revgenseq[em:ny]
-                            newseq1 = newseq
+                    genome_ref = Fasta(returnlst[2])
+                    chr_ref = returnlst[1]
+                    if minusstrand is False:
+                        newseq = genome_ref[chr_ref][nx-1:ny].seq
+                        newseq1 = newseq
+                    elif minusstrand is True:
+                        newseq =  genome_ref[chr_ref][nx-1:ny].reverse.complement.seq
+                        newseq1 = newseq
+                    
+                    # Bug here:
+                    # When have the revgenseq sequence, the retrieval of the newseq sequence is
+                    # not correct, since when do revgenseq[a:b] it retrieves from the last index
+                    # to the first one
+                    # filer=openfile(returnlst[2]) #this loop to get the flipped sequence
+                    # fread = SeqIO.parse(filer,"fasta")
+                    #
+                    # for i in fread:
+                    #     if i.id==returnlst[1] and minusstrand is False:#
+                    #         newseq=i.seq[nx:sm]+i.seq[sm:sm+m]+i.seq[em:ny]
+                    #         newseq1 = newseq
+                    #     elif i.id==returnlst[1] and minusstrand is True:#minus strand
+                    #         genseq=i.seq
+                    #         revgenseq=(i.seq).reverse_complement() #reverse the genomic sequence
+                    #         newseq=revgenseq[nx-1:sm]+revgenseq[sm-1:sm+m]+revgenseq[em-1:ny]
+                    #         newseq1 = newseq
 
 
                     oldlstlstr=[]
