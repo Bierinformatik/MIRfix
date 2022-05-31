@@ -203,6 +203,8 @@ def extend_sequence(precursor, indexed_genomes, extension, sense, workfolder):
             else:
                 start = int(start) - int(extension) #
                 end = int(end) + int(extension)
+            if start < 1:
+                start = 1
             #index sequence
             get_genome = Fasta(genome)
             # Get forward precursor
@@ -253,6 +255,8 @@ def find_precursor_genome(id, precursor, genome, extension, workfolder):
         # Add additional nt to complete adjacent nt
         start = int(start) - int(extension)
         end = int(end) + int(extension) #
+        if start < 1:
+            start = 1
         #index sequence
         get_genome = Fasta(genome)
         # Get forward precursor
@@ -359,7 +363,8 @@ def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop
                     newspos=newx #new start position of mature
                     newepos=newx+m-1 #new end position of mature
                     log.debug(["mat= ",matdesc,matseq])
-
+                    if nx < 1:
+                        nx = 1
                     genome_ref = Fasta(returnlst[2])
                     chr_ref = returnlst[1]
                     if minusstrand is False:
