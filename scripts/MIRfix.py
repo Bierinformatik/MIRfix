@@ -88,8 +88,8 @@ def getindex2mat(sequence, specie, precID, precdesc, listnogenomes, listnotingen
         specieitem=specie.split()
         listofgenomes=[]
         lstgenomes = openfile(args.genomes)
-        flaggenome=0#if there is a genomes for the specie, then it is 1
-        flagseq=0#if the sequence found in its genome, then it is 1
+        flaggenome=0 #if there is a genomes for the specie, then it is 1
+        flagseq=0 #if the sequence found in its genome, then it is 1
 
         for lines in lstgenomes:
             line=lines.strip()
@@ -104,60 +104,15 @@ def getindex2mat(sequence, specie, precID, precdesc, listnogenomes, listnotingen
         if len(listofgenomes)>0:
             log.debug(["list of genomes>0:",sequence])
             for gen in listofgenomes:
-                filer=openfile(gen)
-                fread = SeqIO.parse(filer,"fasta")
-                #precind = None
-                #precind = str(i.seq).find(sequence)
-                rep_str  = re.compile("T", re.IGNORECASE)
-                for i in fread:
-                    if "U" in str(i.seq).upper() and  "T" in str(i.seq).upper() :
-                        i.seq=Seq(rep_str.sub("U",str(i.seq)))
-                    precind = None
-                    precind = str(i.seq).find(sequence)
-                    if precind > 0:
-                        log.debug(["in genome",precID])
-                        flagseq=1
-                        gseq=str(i.seq)
-                        #cutlongbefore=100
-                        #cutlongafter=100
-                        cutlongbefore=250 #Not 250?
-                        cutlongafter=250 #Not 250?
-                        beforeseq=len(gseq[:precind])
-                        afterseq=len(gseq[precind+len(sequence):])
-
-                        if beforeseq<cutlongbefore:
-                            cutlongbefore=beforeseq
-
-                        if afterseq<cutlongafter:
-                            cutlongafter=afterseq
-
-                        longseq=gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]
-                        return (str(longseq)),listnogenomes,listnotingenome
-                    else:       # We search for the reverse complement now
-                        precind =  str((i.seq).reverse_complement()).find(sequence) #minus strand
-                        if precind > 0:
-                            log.debug(["in minus genome",precID])
-                            flagseq=1
-                            #gseq=str(i.seq)
-                            gseq=str((i.seq).reverse_complement()) #minus strand
-                            #cutlongbefore=100
-                            #cutlongafter=100
-                            cutlongbefore=250 #Not 250?
-                            cutlongafter=250 #Not 250?
-                            beforeseq=len(gseq[:precind])
-                            afterseq=len(gseq[precind+len(sequence):])
-
-                            if beforeseq<cutlongbefore:
-                                cutlongbefore=beforeseq
-
-                            if afterseq<cutlongafter:
-                                cutlongafter=afterseq
-
-                            #longseq=str(Seq(gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]).reverse_complement())  # we now search for the reverse complement and return this
-                            longseq=str(gseq[precind-cutlongbefore:(precind+len(sequence)+cutlongafter)]) #minus strand
-                            return (str(longseq)),listnogenomes,listnotingenome
-
+                extension = 250
+                (longseq, precind, chr, minusstrand) = find_precursor_genome(precID, sequence, gen, extension, args.outdir)
+                if precind > 0:
+                    log.debug(["in genome",precID])
+                    flagseq=1
+                    return (str(longseq)),listnogenomes,listnotingenome
+                
         if flagseq==0 and flaggenome==1:
+            log.debug(["Not found in available genomes",precID])
             listnotingenome.append(precID)
             return "",listnogenomes,listnotingenome
 
@@ -3118,22 +3073,23 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
 
 def index_genomes(genomes_file):
     logid = scriptname+'.index_genomes: '
-    #log.debug(logid+'Starting to process '+str(filename))
     try:
         listofgenomes = []
-        #for genome in genomes_file:
-        #    if specieitem[0].lower() in genome.lower() and specieitem[1].lower() in genome.lower():
-        #        listofgenomes.append(lines.strip())
-
-        #for selected in listofgenomes:
         with open(genomes_file) as files:
             for genome in files:
-                genome = genome.rstrip()
-                #for genome in genomes_file:
-                # Create blast db for selected
-                cline = NcbimakeblastdbCommandline(dbtype="nucl",input_file=genome)
-                cline()
-                listofgenomes.append(genome)
+                genome = str(genome.rstrip())
+                # Blast db files
+                file_names_list = [genome+".ndb", genome+".nhr", genome+".nin", 
+                                   genome+".not", genome+".nsq", genome+".ntf", genome+".nto"]
+                if all(list(map(os.path.isfile,file_names_list))):
+                    log.debug('Using detected blast index from '+str(genome))
+                    listofgenomes.append(genome)
+                    continue
+                else:
+                    log.debug('Building blast index on '+str(genome))
+                    cline = NcbimakeblastdbCommandline(dbtype="nucl",input_file=genome)
+                    cline()
+                    listofgenomes.append(genome)
         return listofgenomes
 
     except Exception:
