@@ -110,7 +110,7 @@ def getindex2mat(sequence, specie, precID, precdesc, listnogenomes, listnotingen
                     log.debug(["in genome",precID])
                     flagseq=1
                     return (str(longseq)),listnogenomes,listnotingenome
-                
+
         if flagseq==0 and flaggenome==1:
             log.debug(["Not found in available genomes",precID])
             listnotingenome.append(precID)
@@ -328,7 +328,7 @@ def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop
                     elif minusstrand is True:
                         newseq =  genome_ref[chr_ref][nx-1:ny].reverse.complement.seq
                         newseq1 = newseq
-                    
+
                     # Bug here:
                     # When have the revgenseq sequence, the retrieval of the newseq sequence is
                     # not correct, since when do revgenseq[a:b] it retrieves from the last index
@@ -3079,8 +3079,9 @@ def index_genomes(genomes_file):
             for genome in files:
                 genome = str(genome.rstrip())
                 # Blast db files
-                file_names_list = [genome+".ndb", genome+".nhr", genome+".nin", 
-                                   genome+".not", genome+".nsq", genome+".ntf", genome+".nto"]
+                #file_names_list = [genome+".ndb", genome+".nhr", genome+".nin",
+                #                   genome+".not", genome+".nsq", genome+".ntf", genome+".nto"]
+                file_names_list = [ genome+".nin", genome+".nhr", genome+".nsq" ]
                 if all(list(map(os.path.isfile,file_names_list))):
                     log.debug('Using detected blast index from '+str(genome))
                     listofgenomes.append(genome)
