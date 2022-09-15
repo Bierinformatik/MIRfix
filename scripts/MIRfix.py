@@ -135,9 +135,7 @@ def extend_sequence(precursor, indexed_genomes, extension, sense, workfolder):
         cline = NcbiblastnCommandline(query=temp_fasta, db=genome, perc_identity=100.0, qcov_hsp_perc=100.0, word_size=40, max_target_seqs=5, out=out_blast, outfmt=6)
         cline()
         filesize = os.path.getsize(out_blast)
-        if filesize == 0:
-            continue
-        else:
+        if filesize > 0:
             with open(out_blast) as filename:
                 #  target_sequence    chr12    100.000    57    0    0    1    57    8956681    8956737    3.96e-23    106
                 first_line = filename.readline().rstrip()
@@ -182,7 +180,7 @@ def find_precursor_genome(id, precursor, genome, extension, workfolder):
     temporal.close()
     genome = genome.rstrip()
     out_blast = workfolder+"temporal_blast_genome.txt"
-    cline = NcbiblastnCommandline(query=temp_fasta, db=genome, perc_identity=100.0, qcov_hsp_perc=100.0, word_size=50, max_target_seqs=5, out=out_blast, outfmt=6)
+    cline = NcbiblastnCommandline(query=temp_fasta, db=genome, strand="both", perc_identity=100.0, qcov_hsp_perc=100.0, word_size=50, max_target_seqs=5, out=out_blast, outfmt=6)
     cline()
     filesize = os.path.getsize(out_blast)
     minusstrand = False
@@ -197,10 +195,10 @@ def find_precursor_genome(id, precursor, genome, extension, workfolder):
             first_line = filename.readline().rstrip()
             fields = first_line.split()
             chr = fields[1]
-            start = fields[8]
+            start = int(fields[8])
             start_genome = int(fields[8])
-            end = fields[9]
-            if start <= end:
+            end = int(fields[9])
+            if start < end:
                 strand = 1
             else:
                 start = fields[9]
@@ -278,6 +276,7 @@ def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop
                 log.debug(["cut", xcut, ycut])
 
                 # CAVH: Here be sure that the surrounding is 10nt always.
+                precseqOLD = precseq # Save a reference in case it is not located on the genome
                 if xcut>ycut and ycut>10:#=> 3p cut from the end
                     precseq=precseq[:epos+11]
                 elif xcut>ycut and ycut==10:#=> 3p and no need to cut, already <=10
@@ -285,7 +284,10 @@ def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop
                 elif xcut>ycut and ycut<10:#=> 3p and no need to cut, already <=10
                     # Extent to 10 the sequence
                     diff = 10 - ycut
+                    precseq=precseq.replace("U","T")#r
                     precseq = extend_sequence(precseq, indexed_genomes, diff, "3p", outdir)
+                    if precseq is None:
+                        precseq = precseqOLD
                 elif xcut<ycut and xcut>10:#=> 5p cut at the top
                     precseq=precseq[spos-10:]
                 elif xcut<ycut and xcut==10:#=> 5p and no need to cut, already <=10
@@ -294,11 +296,16 @@ def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop
                 elif xcut<ycut and xcut<10:#=> 5p and no need to cut, already <=10
                     #Extend to 10 the sequence
                     diff = 10 - xcut
+                    precseq=precseq.replace("U","T")#r
                     precseq = extend_sequence(precseq, indexed_genomes, diff, "5p", outdir)
+                    if precseq is None or precseq == "":
+                        precseq = precseqOLD
 
+                precseq=precseq.replace("U","T")#r
+                matseq=matseq.replace("U","T")#r
                 spos=str(precseq).find(matseq)#spos after cut
                 epos=spos+len(matseq)-1 #epos after cut
-                precseq=precseq.replace("U","T")#r
+                matseq=matseq.replace('T','U')
                 returnlst,listnogenomes,listnotingenome,templong,minusstrand=getindex(precseq,specie,precID,precDes,listnogenomes,listnotingenome,templong, args)# returns 3 values received, the first is the index of the sequence, the ID where this sequence found in the genome and the genome filename
 
                 if precID not in listnogenomes and precID not in listnotingenome:
@@ -328,25 +335,6 @@ def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop
                     elif minusstrand is True:
                         newseq =  genome_ref[chr_ref][nx-1:ny].reverse.complement.seq
                         newseq1 = newseq
-
-                    # Bug here:
-                    # When have the revgenseq sequence, the retrieval of the newseq sequence is
-                    # not correct, since when do revgenseq[a:b] it retrieves from the last index
-                    # to the first one
-                    # filer=openfile(returnlst[2]) #this loop to get the flipped sequence
-                    # fread = SeqIO.parse(filer,"fasta")
-                    #
-                    # for i in fread:
-                    #     if i.id==returnlst[1] and minusstrand is False:#
-                    #         newseq=i.seq[nx:sm]+i.seq[sm:sm+m]+i.seq[em:ny]
-                    #         newseq1 = newseq
-                    #     elif i.id==returnlst[1] and minusstrand is True:#minus strand
-                    #         genseq=i.seq
-                    #         revgenseq=(i.seq).reverse_complement() #reverse the genomic sequence
-                    #         newseq=revgenseq[nx-1:sm]+revgenseq[sm-1:sm+m]+revgenseq[em-1:ny]
-                    #         newseq1 = newseq
-
-
                     oldlstlstr=[]
                     oldlstlstl=[]
                     oldparts=0
@@ -3147,6 +3135,7 @@ def sublist(queue, configurer, level, filename, args):
         listremovenoloop = [] #Collect candidates without loop after curation
         listhighmfe = [] #Collect all candidates with high MFE after all curation
         listlonghairpin = [] #Collect all candidates with a final reported hairpin
+        listbadmature = [] #Collect all candidates that failed mature prediction
         nomats=0
         templong=[]
         userflanking=0
@@ -3366,8 +3355,6 @@ def sublist(queue, configurer, level, filename, args):
 #                        mepos=pseq.find(str(Seq(ematseq).reverse_complement()))
                     # Now we have found start and end position on plus and minus strands
 
-
-
                     xcutseq=len(pseq[:mspos])#used in case the seq not found in the genome
                     ycutseq=len(pseq[mepos+1:])
 
@@ -3496,22 +3483,32 @@ def sublist(queue, configurer, level, filename, args):
                     #endmat = startmat+len(curmatseq)-1
                     #endmatstar = (startmatstar+len(curmatstar))-1
                     #CAVH: Because was find(), check that startmat, endmat, startmatstar, endmatstar have values != None
-                    log.debug(logid+str([startmat, startmatstar, finalseq]))
+                    log.debug(logid+str([curmatseq,startmat, startmatstar, finalseq]))
                     if startmat == None or startmatstar == None:
-                        log.error(logid+'Not possible to locate the mapping referred mir or mir* on the mature file for '+resprecid+' with '+mat2seq)
-                        #sys.exit()
+                        log.debug(logid+'Not possible to locate the mapping referred mir or mir* on the mature file for '+resprecid+' with '+mat2seq)
+                        startmat=0
+                        endmat=0
+                        startmatstar=0
+                        endmatstar=0
+                        finalseq=curmatseq
+                        list2matcoor.append("NULL")#matstarID/here no mir* found
+                        list2matcoor.append("NULL")#matstarID/here no mir* found
+                        list2matcoor.append(startmat)
+                        list2matcoor.append(endmat)
+                        list2matcoor.append(startmatstar)
+                        list2matcoor.append(endmatstar)
+                        startmat=0
+                        endmat=0
+                        startmatstar=0
+                        endmatstar=0
+                        listbadmature.append(resprecid)
+                        break
 
                     endmat = startmat+len(curmatseq)-1
                     endmatstar = (startmatstar+len(curmatstar))-1
                     log.debug(logid+str(["heres new",mat2seq,finalseq,startmat,endmat,startmatstar,endmatstar,curmatseq,curmatstar]))
-                    #CAVH: Because was find(), check that startmat, endmat, startmatstar, endmatstar have values != -1
-                    #if startmat == -1 or endmat == -1 or startmatstar == -1 or endmatstar == -1:
-                    #    log.error(logid+'Not possible to locate the mapping referred mir or mir* on the mature file for '+resprecid+' with '+mat2seq)
-                    #    sys.exit()
-                    #if first and second:
                     if first and second and startmat != None and startmatstar != None:
                         coorflag=1
-                        #break
 
                     if coorflag==1:
                         list2matcoor.append(firstmat.strip())
@@ -3625,7 +3622,7 @@ def sublist(queue, configurer, level, filename, args):
                         startmatstar=0
                         endmatstar=0
                         break
-                    elif star and nstar and  startmatstar!=-1 and endmatstar!=-1 and startmatstar<endmat:#to put them in order
+                    elif star and nstar and startmatstar!=-1 and endmatstar!=-1 and startmatstar<endmat:#to put them in order
                         list1matcoor.append(curmatsplit[1].strip())#matstarID
                         list1matcoor.append(curmatID.strip())#mat original
                         list1matcoor.append(startmatstar)
@@ -3739,7 +3736,24 @@ def sublist(queue, configurer, level, filename, args):
                                                  userflanking)
 
                     if coortemp1 == None or coortemp2 == None:
-                        log.error(logid+'Not possible to locate miR or miR* in ' + curmatID)
+                        log.debug(logid+'Not possible to locate miR or miR* in ' + resprecid + " " + curmatseq)
+                        startmat=0
+                        endmat=0
+                        startmatstar=0
+                        endmatstar=0
+                        finalseq=curmatseq
+                        list1matcoor.append("NULL")#mat original/here no mir
+                        list1matcoor.append("NULL")#matstarID/here no mir* found
+                        list1matcoor.append(startmat)
+                        list1matcoor.append(endmat)
+                        list1matcoor.append(startmatstar)
+                        list1matcoor.append(endmatstar)
+                        startmat=0
+                        endmat=0
+                        startmatstar=0
+                        endmatstar=0
+                        listbadmature.append(resprecid)
+                        break
 
                     if coortemp2<coortemp1:
                         tempseqex=curmatseq[:]
@@ -3935,11 +3949,11 @@ def sublist(queue, configurer, level, filename, args):
 
             for n in range(mk+1,int(len(listmatcoor)/7)+1):
                 with open(outdir+filename.strip()+"-Final.anc","a") as anchorcoorfile:
-                    if listmatcoor[mi+3] == -1 or listmatcoor[mi+10+r] == -1 or listmatcoor[mi+3] == 0 or listmatcoor[mi+10+r] == 0:
+                    if listmatcoor[mi+1] == "NULL" or listmatcoor[mi+3] == -1 or listmatcoor[mi+10+r] == -1 or listmatcoor[mi+3] == 0 or listmatcoor[mi+10+r] == 0:
                         continue
                     else:
                         anchorcoorfile.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+3]+1)+" "+str(listmatcoor[mi+10+r]+1)+" "+str(22)+" "+str(1)+"\n")
-                    if listmatcoor[mi+5] == -1 or listmatcoor[mi+12+r] == -1 or listmatcoor[mi+5] == 0 or listmatcoor[mi+12+r] == 0:
+                    if listmatcoor[mi+1] == "NULL" or listmatcoor[mi+5] == -1 or listmatcoor[mi+12+r] == -1 or listmatcoor[mi+5] == 0 or listmatcoor[mi+12+r] == 0:
                         continue
                     else:
                         anchorcoorfile.write(str(mk)+" "+str(n)+" "+str(listmatcoor[mi+5]+1)+" "+str(listmatcoor[mi+12+r]+1)+" "+str(22)+" "+str(1)+"\n")
@@ -4246,6 +4260,9 @@ def sublist(queue, configurer, level, filename, args):
             elif len(listhighmfe)>0:
                 for k in range(0, len(listhighmfe)):
                     summaryfile.write(str(listhighmfe[k].strip()) + "\n")
+            elif len(listbadmature)>0:
+                for k in range(0, len(listbadmature)):
+                    summaryfile.write(str(listbadmature[k].strip()) + "\n")
             elif len(listlonghairpin)>0:
                 for k in range(0, len(listlonghairpin)):
                     summaryfile.write(str(listlonghairpin[k].strip()) + "\n")
@@ -4275,6 +4292,14 @@ def sublist(queue, configurer, level, filename, args):
                     summaryfile.write(str(listhighmfe[j].strip()) + "\n")
             else:
                 summaryfile.write("---> All precursors reported a valid MFE range ----------------------------\n")
+
+            summaryfile.write("\n")
+            summaryfile.write("# Precursors with unsuccessful mature prediction---------------------------\n")
+            if len(listbadmature)>0:
+                for j in range(0, len(listbadmature)):
+                    summaryfile.write(str(listbadmature[j].strip()) + "\n")
+            else:
+                summaryfile.write("---> All precursors reported canonical mature positions ----------------------------\n")
 
             summaryfile.write("\n")
             summaryfile.write("# Precursors with reported precursor size > 200 nt---------------------------\n")
@@ -4309,11 +4334,11 @@ def sublist(queue, configurer, level, filename, args):
 
         #Total
         Processed=(len(listofold)/2)+(len(list2mat)/3)+(len(listofoldloop)/2)+(len(listofnew)/2)+(len(listofnewloop)/2)#+len(listnomat)
-        Removed=(len(listofboth)/2 + len(listnomatN) + len(listremovenoloop) + len(listhighmfe) + len(listlonghairpin))
+        Removed=(len(listofboth)/2 + len(listnomatN) + len(listremovenoloop) + len(listhighmfe) + len(listbadmature) + len(listlonghairpin))
         TotalnumberofSequences=Processed+Removed
         #no mats/predicted-no prediction
         predicted=tempcountsucnomat
-        noprediction=len(listnomat)-tempcountsucnomat-len(listnomatN)-len(listremovenoloop)-len(listhighmfe)-len(listlonghairpin)
+        noprediction=len(listnomat)-tempcountsucnomat-len(listnomatN)-len(listremovenoloop)-len(listhighmfe)-len(listbadmature)-len(listlonghairpin)
 
         #Corrected/notcorrected
         flippednotcorrected=int((len(listofnew)/2))+int((len(listofnewloop)/2))-int(countcorrected)
@@ -4481,7 +4506,7 @@ def sublist(queue, configurer, level, filename, args):
             #summaryfile.write("*Number of removed precursors= "+str(int(len(listofboth)/2))+"\n")
             summaryfile.write("*Number of removed precursors= "+str(int(Removed))+"\n")
             summaryfile.write("*Number of precursors without a given matures= "+str(int(len(listnomat)))+"\n")
-            summaryfile.write("*Number of precursors with successfully predicted matures= "+str(int(len(listnomat)-len(listremovedbroken)-len(listremovedscore)-len(listremovedN)-len(listremovenoloop)-len(listhighmfe)-len(listlonghairpin)))+"\n")
+            summaryfile.write("*Number of precursors with successfully predicted matures= "+str(int(len(listnomat)-len(listremovedbroken)-len(listremovedscore)-len(listremovedN)-len(listremovenoloop)-len(listhighmfe)-len(listbadmature)-len(listlonghairpin)))+"\n")
             summaryfile.write("*Number of precursors without a given genome file= "+str(int(len(listnogenomes)))+"\n")
             summaryfile.write("*Number of precursors not found in their given genomes= "+str(int(len(listnotingenome)))+"\n")
             summaryfile.write("---------------------------Numbers Used For The Graph----------------------------\n")
@@ -4519,7 +4544,7 @@ def sublist(queue, configurer, level, filename, args):
 
         listsuccpred=[]
         for k in range(0,len(listnomat)):
-            if listnomat[k] not in listnomatbroken and listnomat[k] not in listnomatscore and listnomat[k] not in listnomatN and listnomat[k] not in listremovenoloop and listnomat[k] not in listhighmfe and listnomat[k] not in listlonghairpin:
+            if listnomat[k] not in listnomatbroken and listnomat[k] not in listnomatscore and listnomat[k] not in listnomatN and listnomat[k] not in listremovenoloop and listnomat[k] not in listhighmfe and listnomat[k] not in listbadmature and listnomat[k] not in listlonghairpin:
                 listsuccpred.append(str(listnomat[k].strip()))
 
         listremovedjson=[]
@@ -4533,6 +4558,8 @@ def sublist(queue, configurer, level, filename, args):
             listremovedjson.append(listremovenoloop[j].strip())
         for k in range(0, len(listhighmfe)):
             listremovedjson.append(listhighmfe[k].strip())
+        for k in range(0, len(listbadmature)):
+            listremovedjson.append(listbadmature[k].strip())
         for k in range(0, len(listlonghairpin)):
             listremovedjson.append(listlonghairpin[k].strip())
         data = {
@@ -4541,7 +4568,7 @@ def sublist(queue, configurer, level, filename, args):
                 "Number":int(len(listremovedjson)),
                 "IDs":listremovedjson,
             },
-            "Remained precursors":int((len(listofold)/2)+(len(list2mat)/3)-len(listnomatN)-len(listremovenoloop)-len(listhighmfe)-len(listlonghairpin)),
+            "Remained precursors":int((len(listofold)/2)+(len(list2mat)/3)-len(listnomatN)-len(listremovenoloop)-len(listhighmfe)-len(listbadmature)-len(listlonghairpin)),
             "Remained precursors with bad positioned matures":{
                 "Number":int(len(listofoldloopjson)),#int((len(listofoldloop)/2)),
                 "IDs":listofoldloopjson,
@@ -4593,6 +4620,10 @@ def sublist(queue, configurer, level, filename, args):
             "Precursors with high MFE":{
                 "Number": int(len(listhighmfe)),
                 "IDs": listhighmfe,
+            },
+            "Precursors with unsuccessful mature prediction":{
+                "Number": int(len(listbadmature)),
+                "IDs": listbadmature,
             },
             "Precursors with long precursors":{
                 "Number": int(len(listlonghairpin)),
