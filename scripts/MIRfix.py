@@ -3178,18 +3178,11 @@ def sublist(queue, configurer, level, filename, args):
         listnomatremoved=[]
         flagnomatexists=False
 
-        if ".fa" in filename:
-            filename=str(filename).strip()
-            filen=filesdir+filename
-            outdir=str(args.outdir)+filename+".out/"
-            makeoutdir(outdir)
-            #familyfileres=open(outdir+filename+"-res.fa","a")
-        else:
-            filename=str(filename).strip()
-            outdir=str(args.outdir)+filename+".out/"
-            makeoutdir(outdir)
-            filen=filesdir+filename+".fa"
-            #familyfileres=open(outdir+filename+"-res.fa","a")
+        ## prepare output directory for current family
+        filename = str( filename).strip()
+        outdir = str( args.outdir) + filename + ".out/"
+        makeoutdir( outdir, args.force)
+        filen = filesdir + filename + ".fa"
 
         OldShanon=0
         NewShanon=0
@@ -4710,6 +4703,7 @@ def parseargs():
     parser.add_argument("-a", "--mature", type=str, required=True, help='FASTA files containing mature sequences')
     parser.add_argument("-d", "--maturedir", type=str, default='', help='Directory of matures')
     parser.add_argument("-o", "--outdir", type=str, default='', help='Directory for output')
+    parser.add_argument("--force", action='store_true', help='Force MIRfix to overwrite existing output directories')
     parser.add_argument("-e", "--extension", type=int, default=10, help='Extension of nucleotides for precursor cutting')
     parser.add_argument("-l", "--logdir", type=str, default='LOGS', help='Directory to write logfiles to')
     parser.add_argument("--loglevel", type=str, default='WARNING', choices=['WARNING','ERROR','INFO','DEBUG','CRITICAL'], help="Set log level")
@@ -4748,7 +4742,14 @@ def main(args):
         lfams = []
         with openfile(args.families) as filelist:
             for line in filelist:
-                lfams.append(line.strip())
+                line = line.strip()
+                if line.endswith( ".fa"):
+                    line = line[:-3]
+                ## check if there are already output directories
+                ## to prevent errors 
+                if os.path.exists( args.outdir + line + ".out/") and not args.force:
+                    sys.exit( '\nError: At least one output directory already exists! Won\'t override!\nTo override the original output folder, please specify the \'--force\' option.\n')
+                lfams.append( line)
 
         for fam in lfams:
             #sublist(queue, fam, args)

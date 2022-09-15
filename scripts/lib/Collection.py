@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 import logging
 import numpy as np
 import heapq
@@ -781,14 +782,26 @@ def isinvalid(x=None):
         )
         log.error(logid+''.join(tbe.format()))
 
-def makeoutdir(outdir):
+def makeoutdir(outdir, force):
     logid = scriptname+'.makeoutdir: '
     try:
         if not os.path.isabs(outdir):
             outdir =  os.path.abspath(outdir)
-        if not os.path.exists(outdir):
-            os.makedirs(outdir)
+
+        ## if output directory exists and --force is not specify
+        ## stop MIRfix here to prevent errors
+        if os.path.exists( outdir) and not force:
+            sys.exit( 'Error: Output directory already exists! Won\'t override!\nTo override the original output folder, please specify the \'--force\' option.\n')
+            
+        ## in case --force is specified remove the old output dir
+        if os.path.exists( outdir) and force:
+            shutil.rmtree( outdir)
+
+        ## create the output directory
+        os.makedirs(outdir)
+        
         return outdir
+    
     except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         tbe = tb.TracebackException(
