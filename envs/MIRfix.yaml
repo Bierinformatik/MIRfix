@@ -6,19 +6,21 @@ channels:
   - r
 dependencies:
   - biopython =1.78
-  - bzip2 =1.0.8
+  - blast =2.11.0
   - clustalw =2.1
+  - curl =7.76.1
   - dialign2 =2.2.1
+  - libcurl =7.76.1
   - matplotlib =3.3.1
   - matplotlib-base =3.3.1
   - natsort =6.2.0
   - numpy =1.19.1
-  - openssl =1.1.1g
   - pip =20.2.3
   - pyqt =5.12.3
   - python =3.8.5
   - python-dateutil =2.8.1
   - python_abi =3.8
+  - pyfaidx =0.7.1
   - qt =5.12.5
   - readline =8.0
   - setuptools =49.6.0
