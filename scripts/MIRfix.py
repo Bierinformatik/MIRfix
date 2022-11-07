@@ -7,18 +7,14 @@ import sys
 import re
 import shlex
 import multiprocessing
-import numpy as np
-import matplotlib
-#import matplotlib.pyplot as plt
 import json
 import traceback as tb
 from distutils.spawn import find_executable
 # import Bio modules
 from Bio import SeqIO
-from Bio.Seq import Seq
 from Bio import AlignIO
 from Bio.Align.Applications import ClustalwCommandline
-from Bio.Blast.Applications import NcbimakeblastdbCommandline,NcbiblastnCommandline
+from Bio.Blast.Applications import NcbimakeblastdbCommandline, NcbiblastnCommandline
 # Indexing
 from pyfaidx import Fasta
 # Logging
@@ -27,9 +23,13 @@ from lib.logger import makelogdir, makelogfile, listener_process, listener_confi
 # load own modules
 from lib.Collection import *
 
+# Load in future devs
+# import numpy as np
+# import matplotlib
+# import matplotlib.pyplot as plt
+# matplotlib.use('Agg')
 
 log = logging.getLogger(__name__)  # use module name
-# matplotlib.use('Agg')
 scriptname = os.path.basename(__file__).replace('.py', '')
 
 
@@ -39,8 +39,8 @@ def getindex(sequence, specie, precID, precdesc, listnogenomes, listnotingenome,
         specieitem=specie.split()
         listofgenomes=[]
         lstgenomes = openfile(args.genomes)
-        flaggenome=0 #if there is a genomes for the specie, then it is 1
-        flagseq=0 #if the sequence found in its genome, then it is 1
+        flaggenome=0  # if there is a genomes for the specie, then it is 1
+        flagseq=0  # if the sequence found in its genome, then it is 1
         minusstrand=False
         for lines in lstgenomes:
             line=lines.strip()
@@ -51,28 +51,30 @@ def getindex(sequence, specie, precID, precdesc, listnogenomes, listnotingenome,
         if flaggenome==0:
             listnogenomes.append(precID)
             returnlst=[]
-            return returnlst,listnogenomes,listnotingenome,templong, minusstrand
+            return returnlst, listnogenomes, listnotingenome, templong, minusstrand
         if len(listofgenomes)>0:
             returnlst=[]
-            for gen in listofgenomes: # List of available genomes
-                extension = 250 # Extension
-                (longseq, precind, chr, minusstrand) = find_precursor_genome(precID,sequence, gen, extension, args.outdir)
-                if precind > 0:
-                    log.debug(["in genome",precID])
-                    flagseq = 1
-                    templong.append(precID.strip())
-                    templong.append(str(longseq))
-                    returnlst.append(precind)
-                    returnlst.append(str(chr))
-                    returnlst.append(str(gen))
-                    return returnlst,listnogenomes,listnotingenome,templong,minusstrand
+            for gen in listofgenomes:  # List of available genomes
+                extension = 250  # Extension
+                if specieitem[0] in gen:
+                    log.debug(["Location hairpin in genome", specieitem, specieitem[0], gen])
+                    (longseq, precind, chr, minusstrand) = find_precursor_genome(precID, sequence, gen, extension, args.outdir)
+                    if precind > 0:
+                        log.debug(["in genome", precID])
+                        flagseq = 1
+                        templong.append(precID.strip())
+                        templong.append(str(longseq))
+                        returnlst.append(precind)
+                        returnlst.append(str(chr))
+                        returnlst.append(str(gen))
+                        return returnlst, listnogenomes, listnotingenome, templong, minusstrand
 
         if flagseq==0 and flaggenome==1:
             # Sequence not found on genomes
-            log.debug(["Not found in available genomes",precID])
+            log.debug(["Not found in available genomes", precID])
             listnotingenome.append(precID)
             returnlst=[]
-            return returnlst,listnogenomes,listnotingenome,templong,minusstrand
+            return returnlst, listnogenomes, listnotingenome, templong, minusstrand
 
     except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
@@ -82,14 +84,14 @@ def getindex(sequence, specie, precID, precdesc, listnogenomes, listnotingenome,
         log.error(logid+''.join(tbe.format()))
 
 
-def getindex2mat(sequence, specie, precID, precdesc, listnogenomes, listnotingenome, args):#get the index of the original sequence in its genome
+def getindex2mat(sequence, specie, precID, precdesc, listnogenomes, listnotingenome, args):  # get the index of the original sequence in its genome
     logid = scriptname+'.getindex2mat: '
     try:
         specieitem=specie.split()
         listofgenomes=[]
         lstgenomes = openfile(args.genomes)
-        flaggenome=0 #if there is a genomes for the specie, then it is 1
-        flagseq=0 #if the sequence found in its genome, then it is 1
+        flaggenome=0  # if there is a genomes for the specie, then it is 1
+        flagseq=0  # if the sequence found in its genome, then it is 1
 
         for lines in lstgenomes:
             line=lines.strip()
@@ -99,22 +101,24 @@ def getindex2mat(sequence, specie, precID, precdesc, listnogenomes, listnotingen
 
         if flaggenome==0:
             listnogenomes.append(precID)
-            return "",listnogenomes,listnotingenome
+            return "", listnogenomes, listnotingenome
 
         if len(listofgenomes)>0:
-            log.debug(["list of genomes>0:",sequence])
+            log.debug(["list of genomes>0:", sequence])
             for gen in listofgenomes:
                 extension = 250
-                (longseq, precind, chr, minusstrand) = find_precursor_genome(precID, sequence, gen, extension, args.outdir)
-                if precind > 0:
-                    log.debug(["in genome",precID])
-                    flagseq=1
-                    return (str(longseq)),listnogenomes,listnotingenome
+                if specieitem[0] in gen:
+                    log.debug(["Location hairpin in genome", specieitem, specieitem[0], gen])
+                    (longseq, precind, chr, minusstrand) = find_precursor_genome(precID, sequence, gen, extension, args.outdir)
+                    if precind > 0:
+                        log.debug(["in genome", precID])
+                        flagseq=1
+                        return (str(longseq)), listnogenomes, listnotingenome
 
         if flagseq==0 and flaggenome==1:
-            log.debug(["Not found in available genomes",precID])
+            log.debug(["Not found in available genomes", precID])
             listnotingenome.append(precID)
-            return "",listnogenomes,listnotingenome
+            return "", listnogenomes, listnotingenome
 
     except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
@@ -124,52 +128,61 @@ def getindex2mat(sequence, specie, precID, precdesc, listnogenomes, listnotingen
         log.error(logid+''.join(tbe.format()))
 
 
-def extend_sequence(precursor, indexed_genomes, extension, sense, workfolder):
+def extend_sequence(precursor, indexed_genomes, extension, sense, workfolder, specie):
     temp_fasta = workfolder+"temporal_seq.fa"
     temporal = open(temp_fasta, "w")
     print(">target_sequence\n"+precursor, file=temporal)
     temporal.close()
+    short_specie = specie.split()[0]
     for genome in indexed_genomes:
         genome = genome.rstrip()
-        out_blast = workfolder+"temporal_blast.txt"
-        cline = NcbiblastnCommandline(query=temp_fasta, db=genome, perc_identity=100.0, qcov_hsp_perc=100.0, word_size=40, max_target_seqs=5, out=out_blast, outfmt=6)
-        cline()
-        filesize = os.path.getsize(out_blast)
-        if filesize > 0:
-            with open(out_blast) as filename:
-                #  target_sequence    chr12    100.000    57    0    0    1    57    8956681    8956737    3.96e-23    106
-                first_line = filename.readline().rstrip()
-                fields = first_line.split()
-                chr = fields[1]
-                start = fields[8]
-                end = fields[9]
-                if start <= end:
-                    strand = 1
+        # Check only genomes that are related with precursor specie
+        if short_specie in genome:
+            log.debug(["validation genomes", short_specie, specie, genome])
+            out_blast = workfolder+"temporal_blast.txt"
+            cline = NcbiblastnCommandline(query=temp_fasta, db=genome,
+                                          perc_identity=100.0,
+                                          qcov_hsp_perc=100.0,
+                                          word_size=40, max_target_seqs=5,
+                                          out=out_blast, outfmt=6,
+                                          num_threads=4)
+            cline()
+            filesize = os.path.getsize(out_blast)
+            if filesize > 0:
+                with open(out_blast) as filename:
+                    #  target_sequence    chr12    100.000    57    0    0    1    57    8956681    8956737    3.96e-23    106
+                    first_line = filename.readline().rstrip()
+                    fields = first_line.split()
+                    chr = fields[1]
+                    start = fields[8]
+                    end = fields[9]
+                    if start <= end:
+                        strand = 1
+                    else:
+                        start = fields[9]
+                        end = fields[8]
+                        strand = -1
+                # Add additional nt to complete adjacent nt
+                if sense == "5p":
+                    start = int(start) - int(extension)
+                    end = int(end) + int(extension)
                 else:
-                    start = fields[9]
-                    end = fields[8]
-                    strand = -1
-            # Add additional nt to complete adjacent nt
-            if sense == "5p":
-                start = int(start) - int(extension)
-                end = int(end) + int(extension) #
-            else:
-                start = int(start) - int(extension) #
-                end = int(end) + int(extension)
-            if start < 1:
-                start = 1
-            #index sequence
-            get_genome = Fasta(genome)
-            # Get forward precursor
-            if strand == 1:
-                new_sequence = get_genome[chr][start-1:end].seq
-            else:
-                # Here reverse one
-                new_sequence = get_genome[chr][start-1:end].reverse.complement.seq
-            os.remove(out_blast)
-            os.remove(temp_fasta)
-            new_sequence=new_sequence.replace("T","U")
-            return new_sequence
+                    start = int(start) - int(extension)
+                    end = int(end) + int(extension)
+                if start < 1:
+                    start = 1
+                # index sequence
+                get_genome = Fasta(genome)
+                # Get forward precursor
+                if strand == 1:
+                    new_sequence = get_genome[chr][start-1:end].seq
+                else:
+                    # Here reverse one
+                    new_sequence = get_genome[chr][start-1:end].reverse.complement.seq
+                os.remove(out_blast)
+                os.remove(temp_fasta)
+                new_sequence = new_sequence.replace("T", "U")
+                return new_sequence
 
 
 def find_precursor_genome(id, precursor, genome, extension, workfolder):
@@ -180,7 +193,11 @@ def find_precursor_genome(id, precursor, genome, extension, workfolder):
     temporal.close()
     genome = genome.rstrip()
     out_blast = workfolder+"temporal_blast_genome.txt"
-    cline = NcbiblastnCommandline(query=temp_fasta, db=genome, strand="both", perc_identity=100.0, qcov_hsp_perc=100.0, word_size=50, max_target_seqs=5, out=out_blast, outfmt=6)
+    cline = NcbiblastnCommandline(query=temp_fasta, db=genome, strand="both",
+                                  perc_identity=100.0, qcov_hsp_perc=100.0,
+                                  word_size=50, max_target_seqs=5,
+                                  out=out_blast, outfmt=6,
+                                  num_threads=4)
     cline()
     filesize = os.path.getsize(out_blast)
     minusstrand = False
@@ -207,10 +224,10 @@ def find_precursor_genome(id, precursor, genome, extension, workfolder):
                 strand = -1
         # Add additional nt to complete adjacent nt
         start = int(start) - int(extension)
-        end = int(end) + int(extension) #
+        end = int(end) + int(extension)
         if start < 1:
             start = 1
-        #index sequence
+        # index sequence
         get_genome = Fasta(genome)
         # Get forward precursor
         if strand == 1:
@@ -222,12 +239,10 @@ def find_precursor_genome(id, precursor, genome, extension, workfolder):
             minusstrand = True
         os.remove(out_blast)
         os.remove(temp_fasta)
-        #new_sequence=new_sequence.replace("T","U")
-        #longseq, precind, chr, minusstrand
         return (new_sequence, start_genome, chr, minusstrand)
 
 
-def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, list2mat, listnogenomes, listnotingenome, templong, listgoodnew, indexed_genomes, args):#file name is the family name
+def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, list2mat, listnogenomes, listnotingenome, templong, listgoodnew, indexed_genomes, args):  # file name is the family name
     logid = scriptname+'.flip: '
     try:
         item=[]
@@ -236,7 +251,7 @@ def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop
         returnlst=[]
         precfile = openfile(str(filen))
         log.debug(["here prec", filen])
-        for record in SeqIO.parse(precfile,'fasta'): #open the oriented file of a specific family
+        for record in SeqIO.parse(precfile, 'fasta'):  # open the oriented file of a specific family
             precDes=record.description
             precseq=str(record.seq)
             precitem=precDes.split()
@@ -247,27 +262,23 @@ def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop
 
             if precID not in list2mat:
                 mfi = openfile(mappingfile)
-                for famline in mfi:#open the mapping file, to get the mature sequence ID, by the precursor ID in given family
+                for famline in mfi:  # open the mapping file, to get the mature sequence ID, by the precursor ID in given family
                     famlinesplit=famline.split()
-                    if precID in famlinesplit:# and not in 2mat list
-                        log.debug(["prec is here",precID])
+                    if precID in famlinesplit:  # and not in 2mat list
+                        log.debug(["prec is here", precID])
                         flagprec=1
-                        matID=famlinesplit[4].strip()#mature sequence ID
-                        #item=famline.split()
-                        #matID=item[4].strip()#mature sequence ID
-                        log.debug(["mat is here",matID])
+                        matID=famlinesplit[4].strip()  # mature sequence ID
+                        log.debug(["mat is here", matID])
                         mtf = openfile(matfile)
-                        for mat in SeqIO.parse(mtf, "fasta"):#get the corresponding mature sequence and get position
+                        for mat in SeqIO.parse(mtf, "fasta"):  # get the corresponding mature sequence and get position
                             if matID in str(mat.description):
-                                log.debug(["mat is here1",matID])
+                                log.debug(["mat is here1", matID])
                                 matdesc=mat.description
                                 flagmat=1
-                                log.debug(["mat desc is here",matdesc])
+                                log.debug(["mat desc is here", matdesc])
                                 matseq=str(mat.seq).strip()
-                                matseq=matseq.replace('T','U')#replace T by U because the RNAfold produces the sequences as U
+                                matseq=matseq.replace('T', 'U')  # replace T by U because the RNAfold produces the sequences as U
                                 spos=str(precseq).find(matseq)
-#                                if not spos:  # again check minus strand
-#                                    spos=str(precseq).find(reverse_complement(Seq(matseq)))
                                 epos=spos+len(matseq)-1
                                 break
 
@@ -275,56 +286,56 @@ def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop
                 ycut=len(precseq[epos+1:])
                 log.debug(["cut", xcut, ycut])
 
-                # CAVH: Here be sure that the surrounding is 10nt always.
-                precseqOLD = precseq # Save a reference in case it is not located on the genome
-                if xcut>ycut and ycut>10:#=> 3p cut from the end
+                # Here be sure that the surrounding is 10nt always.
+                precseqOLD = precseq  # Save a reference in case it is not located on the genome
+                if xcut>ycut and ycut>10:  # => 3p cut from the end
                     precseq=precseq[:epos+11]
-                elif xcut>ycut and ycut==10:#=> 3p and no need to cut, already <=10
+                elif xcut>ycut and ycut==10:  # => 3p and no need to cut, already <=10
                     precseq=precseq
-                elif xcut>ycut and ycut<10:#=> 3p and no need to cut, already <=10
+                elif xcut>ycut and ycut<10:  # => 3p and no need to cut, already <=10
                     # Extent to 10 the sequence
                     diff = 10 - ycut
-                    precseq=precseq.replace("U","T")#r
-                    precseq = extend_sequence(precseq, indexed_genomes, diff, "3p", outdir)
+                    precseq=precseq.replace("U", "T")  # r
+                    precseq = extend_sequence(precseq, indexed_genomes, diff, "3p", outdir, specie)
                     if precseq is None:
                         precseq = precseqOLD
-                elif xcut<ycut and xcut>10:#=> 5p cut at the top
+                elif xcut<ycut and xcut>10:  # => 5p cut at the top
                     precseq=precseq[spos-10:]
-                elif xcut<ycut and xcut==10:#=> 5p and no need to cut, already <=10
+                elif xcut<ycut and xcut==10:  # => 5p and no need to cut, already <=10
 
                     precseq=precseq
-                elif xcut<ycut and xcut<10:#=> 5p and no need to cut, already <=10
-                    #Extend to 10 the sequence
+                elif xcut<ycut and xcut<10:  # => 5p and no need to cut, already <=10
+                    # Extend to 10 the sequence
                     diff = 10 - xcut
-                    precseq=precseq.replace("U","T")#r
-                    precseq = extend_sequence(precseq, indexed_genomes, diff, "5p", outdir)
+                    precseq=precseq.replace("U", "T")  # r
+                    precseq = extend_sequence(precseq, indexed_genomes, diff, "5p", outdir, specie)
                     if precseq is None or precseq == "":
                         precseq = precseqOLD
 
-                precseq=precseq.replace("U","T")#r
-                matseq=matseq.replace("U","T")#r
-                spos=str(precseq).find(matseq)#spos after cut
-                epos=spos+len(matseq)-1 #epos after cut
+                precseq=precseq.replace("U","T") # r
+                matseq=matseq.replace("U","T") # r
+                spos=str(precseq).find(matseq)  # spos after cut
+                epos=spos+len(matseq)-1  # epos after cut
                 matseq=matseq.replace('T','U')
-                returnlst,listnogenomes,listnotingenome,templong,minusstrand=getindex(precseq,specie,precID,precDes,listnogenomes,listnotingenome,templong, args)# returns 3 values received, the first is the index of the sequence, the ID where this sequence found in the genome and the genome filename
+                returnlst, listnogenomes, listnotingenome, templong, minusstrand=getindex(precseq, specie, precID, precDes, listnogenomes, listnotingenome, templong, args)  # returns 3 values received, the first is the index of the sequence, the ID where this sequence found in the genome and the genome filename
 
                 if precID not in listnogenomes and precID not in listnotingenome:
                     listnewold=[]
-                    precepos=returnlst[0]+len(precseq)# Get the end position of the prec by adding the length of the prec to the  index where the precursor found in the genome
+                    precepos=returnlst[0]+len(precseq)  # Get the end position of the prec by adding the length of the prec to the  index where the precursor found in the genome
                     x=0
                     m=0
-                    sm=returnlst[0]+spos#start position of the mature sequence in the original precurson in the "GENOME"
-                    em=sm+len(matseq)#end position of the mature sequence in the original precurson in the "GENOME"
-                    x=sm-returnlst[0]#size/number of nucleotides before mature
-                    y=precepos-em#size/number of nucleotides after mature
-                    m=len(matseq)#mature sequence length
-                    nx=sm-y#to replace X by Y
-                    ny=em+x#to replace Y by X
-                    newx=sm-nx #Calculate the new X, the new size/number of nucleotides before mature
-                    newy=ny-em #Calculate the new Y, the new size/number of nucleotides after mature
-                    newspos=newx #new start position of mature
-                    newepos=newx+m-1 #new end position of mature
-                    log.debug(["mat= ",matdesc,matseq])
+                    sm=returnlst[0]+spos  # start position of the mature sequence in the original precurson in the "GENOME"
+                    em=sm+len(matseq)  # end position of the mature sequence in the original precurson in the "GENOME"
+                    x=sm-returnlst[0]  # size/number of nucleotides before mature
+                    y=precepos-em  # size/number of nucleotides after mature
+                    m=len(matseq)  # mature sequence length
+                    nx=sm-y  # to replace X by Y
+                    ny=em+x  # to replace Y by X
+                    newx=sm-nx  # Calculate the new X, the new size/number of nucleotides before mature
+                    newy=ny-em  # Calculate the new Y, the new size/number of nucleotides after mature
+                    newspos=newx  # new start position of mature
+                    newepos=newx+m-1  # new end position of mature
+                    log.debug(["mat= ", matdesc, matseq])
                     if nx < 1:
                         nx = 1
                     genome_ref = Fasta(returnlst[2])
@@ -333,49 +344,48 @@ def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop
                         newseq = genome_ref[chr_ref][nx-1:ny].seq
                         newseq1 = newseq
                     elif minusstrand is True:
-                        newseq =  genome_ref[chr_ref][nx-1:ny].reverse.complement.seq
+                        newseq = genome_ref[chr_ref][nx-1:ny].reverse.complement.seq
                         newseq1 = newseq
                     oldlstlstr=[]
                     oldlstlstl=[]
                     oldparts=0
                     finaloldcomp=[]
-                    listnewold=dofold(listnewold,precDes,precseq,precDes,newseq)
-                    log.debug(["listnewold not in both: ",listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos,matdesc,matseq,outdir,oldparts,finaloldcomp,precDes,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listgoodnew])
-                    oldlstlstr,oldlstlstl,oldparts,finaloldcomp,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listgoodnew=readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos,matdesc,matseq,outdir,oldparts,finaloldcomp,precDes,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listgoodnew)#,newlstlstr,newlstlstl,oldlstlstr,oldlstlstl)#the orient sent to check the fold counts of the mature, the precseqold to print the full ID #The oldlstlstl oldlstlstr, are sent to save the list to the next step when checking the new sequence.
+                    listnewold=dofold(listnewold, precDes, precseq, precDes, newseq)
+                    log.debug(["listnewold not in both: ", listnewold, filename, oldlstlstr, oldlstlstl, spos, epos, newspos, newepos, matdesc, matseq, outdir, oldparts, finaloldcomp, precDes, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, listgoodnew])
+                    oldlstlstr, oldlstlstl, oldparts, finaloldcomp, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, listgoodnew=readfold(listnewold, filename, oldlstlstr, oldlstlstl, spos, epos, newspos, newepos, matdesc, matseq, outdir, oldparts, finaloldcomp, precDes, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, listgoodnew)  # newlstlstr, newlstlstl, oldlstlstr, oldlstlstl)#the orient sent to check the fold counts of the mature, the precseqold to print the full ID #The oldlstlstl oldlstlstr, are sent to save the list to the next step when checking the new sequence.
 
                 elif precID in listnogenomes:
                     listnewold=[]
-                    m=len(matseq)#mature sequence length
-                    newspos=spos #new start position of mature
-                    newepos=epos #new end position of mature
-                    log.debug(["mat= ",matdesc,matseq])
+                    m=len(matseq)  # mature sequence length
+                    newspos=spos   # new start position of mature
+                    newepos=epos   # new end position of mature
+                    log.debug(["mat= ", matdesc, matseq])
                     newseq=str(precseq)
                     newseq1=newseq
                     oldlstlstr=[]
                     oldlstlstl=[]
                     oldparts=0
                     finaloldcomp=[]
-                    listnewold=dofold(listnewold,precDes,precseq,precDes,newseq)
-                    log.debug(["listnewold listnogenome: ",listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos,matdesc,matseq,outdir,oldparts,finaloldcomp,precDes,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listgoodnew])
-                    oldlstlstr,oldlstlstl,oldparts,finaloldcomp,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listgoodnew=readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos,matdesc,matseq,outdir,oldparts,finaloldcomp,precDes,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listgoodnew)
+                    listnewold=dofold(listnewold, precDes, precseq, precDes, newseq)
+                    log.debug(["listnewold listnogenome: ", listnewold, filename, oldlstlstr, oldlstlstl, spos, epos, newspos, newepos, matdesc, matseq, outdir, oldparts, finaloldcomp, precDes, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, listgoodnew])
+                    oldlstlstr, oldlstlstl, oldparts, finaloldcomp, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, listgoodnew=readfold(listnewold, filename, oldlstlstr, oldlstlstl, spos, epos, newspos, newepos, matdesc, matseq, outdir, oldparts, finaloldcomp, precDes, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, listgoodnew)
 
                 elif precID in listnotingenome:
                     listnewold=[]
-                    m=len(matseq)#mature sequence length
-                    newspos=spos #new start position of mature
-                    newepos=epos #new end position of mature
-                    log.debug(["mat= ",matdesc,matseq])
+                    m=len(matseq) # mature sequence length
+                    newspos=spos  # new start position of mature
+                    newepos=epos  # new end position of mature
+                    log.debug(["mat= ", matdesc, matseq])
                     newseq=str(precseq)
-                    newseq1=newseq
                     oldlstlstr=[]
                     oldlstlstl=[]
                     oldparts=0
                     finaloldcomp=[]
-                    listnewold=dofold(listnewold,precDes,precseq,precDes,newseq)
-                    log.debug(["listnewold not in genome: ",listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos,matdesc,matseq,outdir,oldparts,finaloldcomp,precDes,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listgoodnew])
-                    oldlstlstr,oldlstlstl,oldparts,finaloldcomp,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listgoodnew=readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos,matdesc,matseq,outdir,oldparts,finaloldcomp,precDes,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listgoodnew)
+                    listnewold=dofold(listnewold, precDes, precseq, precDes, newseq)
+                    log.debug(["listnewold not in genome: ", listnewold, filename, oldlstlstr, oldlstlstl, spos, epos, newspos, newepos, matdesc, matseq, outdir, oldparts, finaloldcomp, precDes, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, listgoodnew])
+                    oldlstlstr, oldlstlstl, oldparts, finaloldcomp, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, listgoodnew=readfold(listnewold, filename, oldlstlstr, oldlstlstl, spos, epos, newspos, newepos, matdesc, matseq, outdir, oldparts, finaloldcomp, precDes, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, listgoodnew)
 
-        return listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listnogenomes,listnotingenome,templong,listgoodnew
+        return listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, listnogenomes, listnotingenome, templong, listgoodnew
 
     except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
@@ -385,11 +395,11 @@ def flip(filename, filen, outdir, mappingfile, matfile, listofnew, listofnewloop
         log.error(logid+''.join(tbe.format()))
 
 
-def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos,matdesc,matseq,outdir,oldparts,finaloldcomp,precDes,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listgoodnew):
+def readfold(listnewold, filename, oldlstlstr, oldlstlstl, spos, epos, newspos, newepos, matdesc, matseq, outdir, oldparts, finaloldcomp, precDes, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, listgoodnew):
     logid = scriptname+'.readfold: '
     try:
-        log.debug(["readfold",listnewold])
-        for i in range(0,len(listnewold)):
+        log.debug(["readfold", listnewold])
+        for i in range(0, len(listnewold)):
             if i==0 or i==4:
                 log.debug(i)
                 if i==0:
@@ -406,10 +416,10 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                     realpos=0
                     left=[]
                     right=[]
-                    lstlstr=[]#list of list for right ")"
-                    lstlstl=[]#list of list for left "("
-                    newlstlstr=[]#list of list for right ")" of the new sequence
-                    newlstlstl=[]#list of list for left "(" of the new sequence
+                    lstlstr=[]  # list of list for right ")"
+                    lstlstl=[]  # list of list for left "("
+                    newlstlstr=[]  # list of list for right ")" of the new sequence
+                    newlstlstl=[]  # list of list for left "(" of the new sequence
                     curr=0
                     nextl=0
                     cut=0
@@ -436,47 +446,46 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                     realpos=0
                     left=[]
                     right=[]
-                    lstlstr=[]#list of list for right ")"
-                    lstlstl=[]#list of list for left "("
-                    newlstlstr=[]#list of list for right ")" of the new sequence
-                    newlstlstl=[]#list of list for left "(" of the new sequence
+                    lstlstr=[]  # list of list for right ")"
+                    lstlstl=[]  # list of list for left "("
+                    newlstlstr=[]  # list of list for right ")" of the new sequence
+                    newlstlstl=[]  # list of list for left "(" of the new sequence
                     curr=0
                     nextl=0
                     cut=0
                     flag=0
-                    countfold=0
                     newbroken=False
                     newloop=False
                     newparts=0
                     newncounts=0
                     warnlength=0
 
-                while pos<len(st): #to count the parts, loop in the string until we found another open "(" after a close ")", then means one more part.. in this case the pos assingned zero again, and the new st is the new part
-                    parts=parts+1 #1 part: ..((.)).. #2parts: ..((.))..(((.)))..
-                    tempright=[]  #positions of the ")"
-                    templeft=[] ##positions of the "("
+                while pos<len(st):  # to count the parts, loop in the string until we found another open "(" after a close ")", then means one more part.. in this case the pos assingned zero again, and the new st is the new part
+                    parts=parts+1  # 1 part: ..((.)).. #2parts: ..((.))..(((.)))..
+                    tempright=[]  # positions of the ")"
+                    templeft=[]  # positions of the "("
                     for i in st:
-                        realpos=cut+pos #cut is where we find new "(" after closing ")",the real position is always the position in the original string (all string not when divided into new parts
+                        realpos=cut+pos  # cut is where we find new "(" after closing ")",the real position is always the position in the original string (all string not when divided into new parts
                         if i=="(":
                             left.append(realpos)
-                            curr=pos #current position, changes in each new string (new part, in case the main strign was more than one part)
+                            curr=pos  # current position, changes in each new string (new part, in case the main strign was more than one part)
                             templeft.append(realpos)
                         elif i==")":
                             right.append(realpos)
                             tempright.append(realpos)
                             nextl=pos
 
-                        if nextl<curr and nextl>0: #here means that we have more one part, by finding "(" after ")"
+                        if nextl<curr and nextl>0:  # here means that we have more one part, by finding "(" after ")"
                             endofcurrentpart=str(left[-1]-1)
                             startofnextpart=str(right[-1]+1)
                             left.pop()
                             templeft.pop()
                             realpos-=1
-                            st=st[pos:]#make the next part as new string
+                            st=st[pos:]  # make the next part as new string
                             partslist.append(int(endofcurrentpart))
                             partslist.append(int(startofnextpart))
-                            cut=realpos # cut at the real position of thr whole original string
-                            pos=0#position=zero for the new string (new part)
+                            cut=realpos  # cut at the real position of thr whole original string
+                            pos=0  # position=zero for the new string (new part)
                             templst=right
                             templst=[]
                             nextl=0
@@ -491,12 +500,12 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                     lstlstr.append(tempright)
                     lstlstl.append(templeft)
 
-                if (len(lstlstr) != len(lstlstl)) or ( (")" not in hairpin) and ('(' not in hairpin )) :#checking the parts
+                if (len(lstlstr) != len(lstlstl)) or ((")" not in hairpin) and ('(' not in hairpin)):  # checking the parts
                     flag=1
 
                 else:
                     for i in range(len(lstlstr)):
-                        if len(lstlstr[i])!=len(lstlstl[i]):#check if the foldings not equal
+                        if len(lstlstr[i])!=len(lstlstl[i]):  # check if the foldings not equal
                             flag=1
 
                 if stat=="old":
@@ -507,14 +516,14 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                     y=newepos
                 partslstlen=len(partslist)
                 i=0
-                #if the parts are overlapping, like: ..(((.(((((...)))))..((((..)))).)))...,,,in this case we take only the parts inside and ignore the outer foldings, in this section we correct the parts
+                # if the parts are overlapping, like: ..(((.(((((...)))))..((((..)))).)))...,,,in this case we take only the parts inside and ignore the outer foldings, in this section we correct the parts
 
                 if warnlength==1:
                     log.debug("here warn")
                     log.debug(partslist)
-                    #for i in range(0,partslstlen):
+                    # for i in range(0,partslstlen):
                     while i <=len(partslist)-1:
-                        if i==0 :
+                        if i==0:
                             warnleft=[]
                             warnright=[]
                             warnhairpin=hairpin[0:(int(partslist[0])+1)]
@@ -535,7 +544,7 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                                     i=3
                                 log.debug(partslist)
                                 log.debug(i)
-                            if len(warnleft)<len(warnright):#which is impossible to happen
+                            if len(warnleft)<len(warnright): # which is impossible to happen
                                 log.debug("L")
                                 diff=len(warnright)-len(warnleft)
                                 neweindex=warnright[len(warnright)-diff]-1
@@ -568,7 +577,7 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                                 partslist[i]=warnleft[newsindex]+1
                                 i=len(partslist)
 
-                            if len(warnleft)<len(warnright):#which is impossible to happen
+                            if len(warnleft)<len(warnright): # which is impossible to happen
                                 diff=len(warnright)-len(warnleft)
                                 neweindex=warnright[len(warnright)-diff]-1
                                 partslist.insert(i+1,-1)
@@ -583,7 +592,7 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                             warnright=[]
                             log.debug("mid")
                             log.debug(partslist)
-                            for k in range(int(partslist[i-1]),int(partslist[i])+1):
+                            for k in range(int(partslist[i-1]), int(partslist[i])+1):
                                 if hairpin[k]=="(":
                                     warnleft.append(k)
                                 if hairpin[k]==")":
@@ -598,12 +607,12 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                                 partslist[i-1]=warnleft[newsindex]+1
                                 i=i+1
 
-                            if len(warnleft)<len(warnright) and len(partslist)>4 and (int(len(partslist))-i)>2:#which is impossible to happen
+                            if len(warnleft)<len(warnright) and len(partslist)>4 and (int(len(partslist))-i)>2:  # which is impossible to happen
                                 diff=len(warnright)-len(warnleft)
                                 neweindex=warnright[len(warnright)-diff]-1
                                 partslist[i]=neweindex
                                 i=i+2
-                            elif (len(warnleft)<len(warnright) and len(partslist)>4 and (int(len(partslist))-i)==2) or (len(warnleft)<len(warnright) and len(partslist)==4):#which is impossible to happen
+                            elif (len(warnleft)<len(warnright) and len(partslist)>4 and (int(len(partslist))-i)==2) or (len(warnleft)<len(warnright) and len(partslist)==4):  # which is impossible to happen
                                 diff=len(warnright)-len(warnleft)
                                 neweindex=warnright[len(warnright)-diff]-1
                                 partslist[i]=neweindex
@@ -615,8 +624,7 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                                 i=i+1
                             elif len(warnleft)==len(warnright) and len(partslist)==4:
                                 i=i+1
-                        partslstlen=len(partslist)
-                #at this section the the parts list is corrected ( if needed )
+                # at this section the the parts list is corrected ( if needed )
                 if parts>1:
                     lstcompinside=[]
                     lstcompstart=[]
@@ -632,7 +640,7 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                     else:
                         newparts=parts
                     for i in range(0,len(partslist)):
-                        if i==0 and partslist[0]!=-1:#if the partslist starting from position zero, i.e. the first part starts at position zero
+                        if i==0 and partslist[0]!=-1:  # if the partslist starting from position zero, i.e. the first part starts at position zero
                             loopstart=hairpin.rfind('(',0,int(partslist[0])+1)+1
                             loopend=hairpin.find(')',0,int(partslist[0])+1)-1
                             if (((x in range(0,loopstart)) and (y in range(0,loopstart))) or ((x  in range(loopend+1,int(partslist[0])+1)) and (y in range(loopend+1,int(partslist[0])+1)))) and stat=="old":
@@ -770,7 +778,6 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                                 newbroken=False
                                 newloop=False
                                 newncounts=int(hairpin[int(partslist[i]):].count("("))+int(hairpin[int(partslist[i]):].count(")"))
-                                currncounts=int(hairpin[int(partslist[i]):].count("("))+int(hairpin[int(partslist[i]):].count(")"))
                                 lstcompend.append(newbroken)
                                 lstcompend.append(newloop)
                                 lstcompend.append(i)
@@ -942,25 +949,25 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                                     lstcompinside.append(respos)
                                     lstcompinside.append(rescounts)
 
-                    #all if here and elif here, are not broken when len>0 then we compare the loop
-                    if len(lstcompstart)>0 and len(lstcompinside)==0 and len(lstcompend)==0:#start only
+                    # all if here and elif here, are not broken when len>0 then we compare the loop
+                    if len(lstcompstart)>0 and len(lstcompinside)==0 and len(lstcompend)==0:  #start only
                         finalcomp=lstcompstart
                         posi=finalcomp[2]
                         finalcomp.append(0)
                         finalcomp.append(int(partslist[0]))
-                    elif len(lstcompstart)==0 and len(lstcompinside)>0 and len(lstcompend)==0:#middle only
+                    elif len(lstcompstart)==0 and len(lstcompinside)>0 and len(lstcompend)==0:  #middle only
                         finalcomp=lstcompinside
-                        posi=finalcomp[2]#the index in partslist, that stores the real end position of a given sub-stem
+                        posi=finalcomp[2]  # the index in partslist, that stores the real end position of a given sub-stem
 
                         finalcomp.append(int(partslist[posi-1]))
                         finalcomp.append(int(partslist[posi]))
-                    elif len(lstcompstart)==0 and len(lstcompinside)==0 and len(lstcompend)>0:#end only
+                    elif len(lstcompstart)==0 and len(lstcompinside)==0 and len(lstcompend)>0:  #end only
                         finalcomp=lstcompend
                         posi=finalcomp[2]
                         finalcomp.append(int(partslist[posi]))
                         finalcomp.append(len(hairpin)-1)
-                    elif len(lstcompstart)>0 and len(lstcompinside)>0:#start + middle
-                        if lstcompstart[1]==lstcompinside[1] and lstcompstart[3]>=lstcompinside[3]:#if both true or false loops we compare the number of foldings
+                    elif len(lstcompstart)>0 and len(lstcompinside)>0:  #start + middle
+                        if lstcompstart[1]==lstcompinside[1] and lstcompstart[3]>=lstcompinside[3]:  # if both true or false loops we compare the number of foldings
                             finalcomp=lstcompstart
                             posi=finalcomp[2]
                             finalcomp.append(0)
@@ -1043,9 +1050,8 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
 
                     if len(finalcomp)>0 and stat=="new":
                         currhairpin=hairpin[finalcomp[4]:finalcomp[5]+1]
-                        #CAVH
                         for i in currhairpin:
-                            if i != ")": #CAVH To detect ')' at the beginning
+                            if i != ")":  # To detect ')' at the beginning
                                 index = currhairpin.index(i)
                                 currhairpin=currhairpin[index:]
                                 break
@@ -1110,7 +1116,6 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                     elif ((x in range(loopstart,loopend+1)) and (y in range(loopstart,loopend+1))) and stat=="new":
                         newbroken=True
                         newloop=True
-                        inloopnew=True
                     elif (((x in range(0,loopstart)) and (y in range(0,loopstart))) or ((x in range(loopend+1,len(hairpin))) and (y in range(loopend+1,len(hairpin)))))  and stat=="new":
                         newloop=False
                         newbroken=False
@@ -1189,14 +1194,14 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                         newhairpend=-1
                         newncounts=-1
 
-                    log.debug(["old: oldbroken= ",oldbroken,"/oldloop= ",oldloop,"start= ",oldhairpstart,"end= ",oldhairpend,"Counts= ",oldncounts, "old score= ",oldscore,"old parts= ",oldparts, "old energy", oldscore])
-                    log.debug(["new: newbroken= ",newbroken,"/newloop= ",newloop,"start= ",newhairpstart,"end= ",newhairpend,"Counts= ",newncounts, "new score= ",newscore,"new parts= ",newparts, "new energy", newscore])
+                    log.debug(["old: oldbroken= ", oldbroken, "/oldloop= ", oldloop, "start= ", oldhairpstart, "end= ", oldhairpend, "Counts= ", oldncounts,  "old score= ", oldscore, "old parts= ", oldparts,  "old energy",  oldscore])
+                    log.debug(["new: newbroken= ", newbroken, "/newloop= ", newloop, "start= ", newhairpstart, "end= ", newhairpend, "Counts= ", newncounts,  "new score= ", newscore, "new parts= ", newparts,  "new energy",  newscore])
                     temcorrectsplit=precid.split()
                     precId=temcorrectsplit[0].strip()
                     precides=temcorrectsplit[1].strip()
-                    if (oldbroken==False and newbroken==False):# I only want to save the old when are possibly flipped into new, so no need to add old when new is broken!
+                    if (oldbroken==False and newbroken==False):  # To save the old when are possibly flipped into new, so no need to add old when new is broken!
                         log.debug("save old good")
-                        mirstarcorr,mirstarsposcorr,mirstareposcorr,miroriencorr=getmirstar(spos,epos,matseq,oldlstlstl,oldlstlstr,oldprecseq,oldhairpstart,oldhairpend)
+                        mirstarcorr, mirstarsposcorr, mirstareposcorr, miroriencorr=getmirstar(spos, epos, matseq, oldlstlstl, oldlstlstr, oldprecseq, oldhairpstart, oldhairpend)
 
                         if mirstarsposcorr!=-1 and mirstareposcorr!=-1:
                             temcorrectsplit=precid.split()
@@ -1210,13 +1215,13 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                             listoldstatus.append(str(miroriencorr))
 
                     done=True
-                if done: #CAVH: Check energies for both
+                if done:  # Check energies for both
                     if oldscore > -10 and newscore > -10:
                         log.debug("Both sequence energies are really high for a miRNA")
                         listofboth.append(precid)
                         listofboth.append(oldprecseq)
                         checkenergy = False
-                    else: #At least one of the sequences has < -10 MFE
+                    else:  #At least one of the sequences has < -10 MFE
                         checkenergy = True
 
                 if done and checkenergy:
@@ -1277,7 +1282,7 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                             listofmirstar.append(str(precsplit[1]))
                             xcut=len(newseq[:mirstarspos])
                             ycut=len(newseq[mirstarepos+1:])
-                            ##mirorien
+
                             if mirorien=='5p' and ycut>10:
                                 newseq=newseq[:mirstarepos+11]
                             elif mirorien=='5p' and ycut<=10:
@@ -1316,7 +1321,6 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                             listofmirstar.append(str(precsplit[1]))
                             xcut=len(newseq[:mirstarspos])
                             ycut=len(newseq[mirstarepos+1:])
-                            ##mirorien
                             if mirorien=='5p' and ycut>10:
                                 newseq=newseq[:mirstarepos+11]
                             elif mirorien=='5p' and ycut<=10:
@@ -1385,7 +1389,6 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                             listofmirstar.append(str(precsplit[1]))
                             xcut=len(newseq[:mirstarspos])
                             ycut=len(newseq[mirstarepos+1:])
-                            ##mirorien
                             if mirorien=='5p' and ycut>10:
                                 newseq=newseq[:mirstarepos+11]
                             elif mirorien=='5p' and ycut<=10:
@@ -1456,7 +1459,6 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                             listofmirstar.append(str(precsplit[1]))
                             xcut=len(newseq[:mirstarspos])
                             ycut=len(newseq[mirstarepos+1:])
-                            ##mirorien
                             if mirorien=='5p' and ycut>10:
                                 newseq=newseq[:mirstarepos+11]
                             elif mirorien=='5p' and ycut<=10:
@@ -1597,7 +1599,6 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                             listofmirstar.append(str(precsplit[1]))
                             xcut=len(newseq[:mirstarspos])
                             ycut=len(newseq[mirstarepos+1:])
-                            ##mirorien
                             if mirorien=='5p' and ycut>10:
                                 newseq=newseq[:mirstarepos+11]
                             elif mirorien=='5p' and ycut<=10:
@@ -1737,7 +1738,6 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                             listofmirstar.append(str(precsplit[1]))
                             xcut=len(newseq[:mirstarspos])
                             ycut=len(newseq[mirstarepos+1:])
-                            ##mirorien
                             if mirorien=='5p' and ycut>10:
                                 newseq=newseq[:mirstarepos+11]
                             elif mirorien=='5p' and ycut<=10:
@@ -1806,7 +1806,6 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                             listofmirstar.append(str(precsplit[1]))
                             xcut=len(newseq[:mirstarspos])
                             ycut=len(newseq[mirstarepos+1:])
-                            ##mirorien
                             if mirorien=='5p' and ycut>10:
                                 newseq=newseq[:mirstarepos+11]
                             elif mirorien=='5p' and ycut<=10:
@@ -1914,7 +1913,6 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                             listofmirstar.append(str(precsplit[1]))
                             xcut=len(newseq[:mirstarspos])
                             ycut=len(newseq[mirstarepos+1:])
-                            ##mirorien
                             if mirorien=='5p' and ycut>10:
                                 newseq=newseq[:mirstarepos+11]
                             elif mirorien=='5p' and ycut<=10:
@@ -1949,7 +1947,6 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                             listofmirstar.append(str(precsplit[1]))
                             xcut=len(newseq[:mirstarspos])
                             ycut=len(newseq[mirstarepos+1:])
-                            #mirorien
                             if mirorien=='5p' and ycut>10:
                                 newseq=newseq[:mirstarepos+11]
                             elif mirorien=='5p' and ycut<=10:
@@ -2005,15 +2002,8 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                         listgoodnew.append(str(splitgoodprec[0]).strip())
                         listgoodnew.append(str(splitgoodprec[1]).strip())
                         log.debug(["here look test:",newspos,newepos,matseq,newlstlstl,newlstlstr,newseq1,newhairpstart,newhairpend])
-#                        for i in len(range(newlstlstl)):
-#                            newlstlstl[i] -= newhairpstart
-#
-#                        for i in len(range(newlstlstr)):
-#                            newlstlstr[i] -= newhairpstart
-#
-#                        mirstar,mirstarspos,mirstarepos,mirorien=getmirstar(newspos,newepos,matseq,newlstlstl,newlstlstr,newseq,0,newhairpend-newhairpstart)
-                        mirstar,mirstarspos,mirstarepos,mirorien=getmirstar(newspos,newepos,matseq,newlstlstl,newlstlstr,newseq1,newhairpstart,newhairpend)
-                        log.debug(["test 1515",mirstar,mirstarspos,mirstarepos,mirorien])
+                        mirstar, mirstarspos, mirstarepos, mirorien=getmirstar(newspos, newepos, matseq, newlstlstl, newlstlstr, newseq1, newhairpstart, newhairpend)
+                        log.debug(["test 1515", mirstar, mirstarspos, mirstarepos, mirorien])
                         if mirstarspos!=-1 and mirstarepos!=-1:
                             log.debug(["also here",mirstar,mirstarspos,mirstarepos])
                             matdescsplit=matdesc.split()
@@ -2030,7 +2020,6 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
 
                             xcut=len(newseq1[:mirstarspos])
                             ycut=len(newseq1[mirstarepos+1:])
-                            ##mirorien
                             if mirorien=='5p' and ycut>10:
                                 newseq1=newseq1[:mirstarepos+11]
                             elif mirorien=='5p' and ycut<=10:
@@ -2039,17 +2028,11 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
                                 newseq1=newseq1[mirstarspos-10:]
                             elif mirorien=='3p' and xcut<=10:
                                 newseq1=newseq1
-                            listgoodnew.append(newseq1)#[precID[0](x-mir-y),precid(MI),matstardesc,mirseq,mirstar,start..end,newseq]
-                            if str(splitgoodprec[0]).strip()=='ola-mir-30c' or str(splitgoodprec[1]).strip()=='MI0019480':
-                                log.debug("for test final here")
-                                log.debug([str(splitgoodprec[0]).strip(),str(splitgoodprec[1]).strip()])
-                                log.debug([mirstar,mirstarspos,mirstarepos,mirorien])
-                                log.debug(listgoodnew)
-
+                            listgoodnew.append(newseq1)  # [precID[0](x-mir-y),precid(MI),matstardesc,mirseq,mirstar,start..end,newseq]
                         else:
                             del listgoodnew[-2:]
 
-        return oldlstlstr,oldlstlstl,oldparts,finaloldcomp,listofnew,listofnewloop,listoldstatus,listofoldloop,listofold,listofboth,listofmirstar,listnomat,listgoodnew
+        return oldlstlstr, oldlstlstl, oldparts, finaloldcomp, listofnew, listofnewloop, listoldstatus, listofoldloop, listofold, listofboth, listofmirstar, listnomat, listgoodnew
 
     except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
@@ -2058,14 +2041,14 @@ def readfold(listnewold,filename,oldlstlstr,oldlstlstl,spos,epos,newspos,newepos
         )
         log.error(logid+''.join(tbe.format()))
 
+
 def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
     logid = scriptname+'.getmirstar: '
-    mirstarepos=0 #CAVH
+    mirstarepos=0
     limit_mirmature = 19
     try:
         log.debug("get mirstar here 18")
         mirflag=False
-#        cutprec=precursor[hairpstart:hairpend]
         if epos>=lstr[0]:
             orien="3p"
         elif epos<lstr[0]:
@@ -2074,7 +2057,7 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
         if ((orien == '5p' and (spos > lstl[-1] or epos>=lstr[0])) or (orien == '3p' and (spos < lstl[-1] or epos < lstr[0])) or epos<=spos):
              log.debug("-1 wrong")
              mirflag=True
-             return "",-1,-1,'p'
+             return "", -1, -1, 'p'
 
         if orien=="5p":
             tempr=lstr
@@ -2092,7 +2075,7 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
             if spos not in templ:
                 for i in templ:
                     if i>int(spos):
-                        sind=templ.index(i) #first ( after spos
+                        sind=templ.index(i)  # first ( after spos
                         diff=i-spos
                         mirstarepos=rev[sind]+diff+2
                         break
@@ -2106,28 +2089,27 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
                 else:
                     for i in templ:
                         if i>int(epos):
-                            sind=templ.index(i)#after the end of the mat
-                            sind1=templ[(sind-1)]#before the end of the mat
+                            sind=templ.index(i)  # after the end of the mat
+                            sind1=templ[(sind-1)]  # before the end of the mat
                             diff=epos-sind1
                             mirstarspos=rev[sind-1]-diff+2
                             break
-            if mirstarspos<=epos:#To avoid overlapping between mir and mir*, this would happen in case the mir is in the loop
+            if mirstarspos<=epos:  # To avoid overlapping between mir and mir*, this would happen in case the mir is in the loop
                 mirstarepos=mirstarepos+(epos-mirstarspos+1)
                 mirstarspos=mirstarspos+(epos-mirstarspos+1)
 
-            if mirstarepos>len(precursor)-1:#To avoid mir* end position going outside the precursor
-                mirstarepos=len(precursor)-1 #TODO: what if after reduction mirstar is too short?
+            if mirstarepos>len(precursor)-1:  # To avoid mir* end position going outside the precursor
+                mirstarepos=len(precursor)-1  # TODO: what if after reduction mirstar is too short?
             mirstarspos = comp_5p(lstl, lstr, spos, mirstarspos, precursor, 1)  # Comparing 5'ends of mir and mir*
             mirstar=precursor[mirstarspos:mirstarepos+1]
-            mirstar= mirstar.replace("T","U")#here it is minus because we are in the 3p arm, the sposstar is actually the last nucleotide in the mir* which is the firt one folding to mir
+            mirstar= mirstar.replace("T","U")  # here it is minus because we are in the 3p arm, the sposstar is actually the last nucleotide in the mir* which is the firt one folding to mir
             log.debug(["get mirstar here 20",mirstar,mirstarspos,orien])
-            if len(mirstar) < limit_mirmature: #CAVH
+            if len(mirstar) < limit_mirmature:
                 log.debug("no predicted mir*")
                 return "",-1,-1,'p'
             else:
                 mirflag=True
                 return (str(mirstar),int(mirstarspos),int(mirstarepos),str(orien))
-        #break
 
         elif orien=="3p":
             tempr=lstr
@@ -2145,7 +2127,7 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
             if spos not in tempr:
                 for i in tempr:
                     if i>int(spos):
-                        sind=tempr.index(i)#first ( after spos
+                        sind=tempr.index(i)  # first ( after spos
                         diff=i-spos
                         mirstarepos=rev[sind]+diff+2
                         break
@@ -2158,36 +2140,33 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
                 else:
                     for i in tempr:
                         if i>int(epos):
-                            sind=tempr.index(i)#after the end of the mat
-                            sind1=tempr[sind-1]#before the end of the mat
+                            sind=tempr.index(i)  # after the end of the mat
+                            sind1=tempr[sind-1]  # before the end of the mat
                             diff=epos-sind1
                             mirstarspos=rev[sind-1]-diff+2
                             break
 
-            if mirstarspos<=0: #CAVH
-                mirstarspos=0 #CAVH
+            if mirstarspos<=0:
+                mirstarspos=0
 
-            if mirstarepos>=spos:#To avoid overlapping between mir and mir*, this would happen in case the mir is in the loop
+            if mirstarepos>=spos:  # To avoid overlapping between mir and mir*, this would happen in case the mir is in the loop
                 mirstarspos=mirstarspos-(mirstarepos-spos+1)
                 mirstarepos=mirstarepos-(mirstarepos-spos+1)
 
-            #if mirstarspos<=0: #CAVH the position is better before last definition
-            #    mirstarspos=0
-
             mirstarspos = comp_5p(lstr, lstl, spos, mirstarspos, precursor, 1)  # Comparing 5'ends of mir and mir*
             mirstar=precursor[mirstarspos:mirstarepos+1]
-            mirstar=mirstar.replace("T","U")#here it is minus because we are in the 3p arm, the sposstar is actually the last nucleotide in the mir* which is the firt one folding to mir
+            mirstar=mirstar.replace("T","U")  # here it is minus because we are in the 3p arm, the sposstar is actually the last nucleotide in the mir* which is the firt one folding to mir
             log.debug(["get mirstar here 24",mirstar,mirstarspos,orien])
             if len(mirstar) < limit_mirmature:
                 log.debug("no predicted mir*")
-                return "",-1,-1,'p'
+                return "", -1, -1, 'p'
             else:
                 mirflag=True
             return (str(mirstar),int(mirstarspos),int(mirstarepos),str(orien))
 
         if not mirflag:
             log.debug("no predicted mir*")
-            return "",-1,-1,'p'
+            return "", -1, -1, 'p'
 
     except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
@@ -2197,12 +2176,11 @@ def getmirstar(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
         log.error(logid+''.join(tbe.format()))
 
 
-def getmirstarbak(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
+def getmirstarbak(spos, epos, mature, lstl, lstr, precursor, hairpstart, hairpend):
     logid = scriptname+'.getmirstarbak: '
     try:
         log.debug("get mirstar here 18")
         mirflag=False
-        cutprec=precursor[hairpstart:hairpend]
         if epos>=lstr[0]:
             orien="3p"
         elif epos<lstr[0]:
@@ -2220,22 +2198,22 @@ def getmirstarbak(spos,epos,mature,lstl,lstr,precursor,hairpstart,hairpend):
             log.debug("get mirstar here 19")
             for i in templ:
                 if i==int(spos):
-                    sind=templ.index(i)#list index(in the list of foldings), of the nucleotide representing the first fold, after the first nucleotide of the mature
-                    sx=templ[sind]#get the item at sind, which is the position in the precursor, of the first folding nucleotide after the first nucleotide of mature
-                    sposstar=rev[sind]#start position of the mature*
+                    sind=templ.index(i)  #list index(in the list of foldings), of the nucleotide representing the first fold, after the first nucleotide of the mature
+                    sx=templ[sind]  #get the item at sind, which is the position in the precursor, of the first folding nucleotide after the first nucleotide of mature
+                    sposstar=rev[sind]  #start position of the mature*
                     mirstarspos=sposstar-len(mature)+1
                     mirstarepos=sposstar
                     mirstar=precursor[mirstarspos+2:mirstarepos+3]
-                    if mirstarspos<=epos:#To avoid overlapping between mir and mir*, this would happen in case the mir is in the loop
+                    if mirstarspos<=epos:  #To avoid overlapping between mir and mir*, this would happen in case the mir is in the loop
                         mirstarepos=mirstarepos+(epos-mirstarspos+1)
                         mirstarspos=mirstarspos+(epos-mirstarspos+1)
 
-                    if mirstarepos>len(precursor)-1:#To avoid mir* end position going outside the precursor
+                    if mirstarepos>len(precursor)-1:  #To avoid mir* end position going outside the precursor
                         mirstarepos=len(precursor)-1
 
                     mirstarspos = comp_5p(lstl, lstr, spos, mirstarspos+2, precursor, 1)  # Comparing 5'ends of mir and mir*
                     mirstar=precursor[mirstarspos:mirstarepos+1]
-                    mirstar= mirstar.replace("T","U")#here it is minus because we are in the 3p arm, the sposstar is actually the last nucleotide in the mir* which is the firt one folding to mir
+                    mirstar= mirstar.replace("T","U")  # here it is minus because we are in the 3p arm, the sposstar is actually the last nucleotide in the mir* which is the firt one folding to mir
                     log.debug(["get mirstar here 20",mirstar,mirstarspos,orien])
                     mirflag=True
                     return (str(mirstar),int(mirstarspos),int(mirstarepos),str(orien))
@@ -2364,10 +2342,8 @@ def predict(align,matId,newmatID,matfile,filename,precdescrip,mapfile,directory,
                 maxnuc=0#max number of nucleotides in each window (the window is the size of the real mature)
                 nuclist=[]
                 maxindex=1000000
-                maxindexlist=[]
-                dup=[]
                 # the window is taking substring from the aligned mature line with szie of  real mature, and move nuc by nuc on the aligned prec to see how many nucleotides matching
-                #CAVH: First evaluate if there is not a high number of Ns in the sequence
+                # First evaluate if there is not a high number of Ns in the sequence
                 (proportionN, totalN, totalseq) = countNSeq(originalseq)
                 if proportionN <= 40 and proportionN > -1: #Number based on RNAfold rules, have to be N content <= 40 from the complete seq
                     for i in range (0,lastindex+1):#moving along the precursor, and stop at the last index, where after that will be out of range
@@ -2388,7 +2364,6 @@ def predict(align,matId,newmatID,matfile,filename,precdescrip,mapfile,directory,
 
                         if countstar>maxstar:#get the index where the window with max exact matching starts,and store the max number of stars
                             maxstar=countstar
-                            oldmaxindex=maxindex
                             maxindex=i
 
                         if countnuc>maxnuc:
@@ -2584,7 +2559,6 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
                 stall=string[splitindex:]
                 st=stall[0:stall.rfind('(')]
                 hairpin=stall[0:stall.rfind('(')]
-                precsequence=string[0:splitindex]
                 partslist=[]
                 parts=0
                 pos=0
@@ -2593,17 +2567,10 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
                 right=[]
                 lstlstr=[]#list of list for right ")"
                 lstlstl=[]#list of list for left "("
-                newlstlstr=[]#list of list for right ")" of the new sequence
-                newlstlstl=[]#list of list for left "(" of the new sequence
                 curr=0
                 next=0
                 cut=0
                 flag=0
-                countfold=0
-                newbroken=False
-                newloop=False
-                newparts=0
-                newncounts=0
                 while pos<len(st): #to count the parts, loop in the string until we found another open "(" after a close ")", then means one more part.. in this case the pos assingned zero again, and the new st is the new part
                     parts=parts+1 #1 part: ..((.)).. #2parts: ..((.))..(((.)))..
                     tempright=[]  #positions of the ")"
@@ -2636,7 +2603,6 @@ def readfoldpredict(foldfile,predictedspos,predictedepos):#,predictedspos,predic
 
                         pos=pos+1
 
-                    templst=right
                     lstlstr.append(tempright)
                     lstlstl.append(templeft)
 
@@ -2926,9 +2892,6 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                 correctmir=str(listoldstatus[corrind+3])
                 correctmirstar=str(listoldstatus[corrind+4])
                 orien=str(listoldstatus[corrind+5])
-                #coor1=int(longseq.find(correctmir)) #CAVH
-                #coor2=int(longseq.find(correctmirstar)) #CAVH
-                #CAVH
                 (coor1, coor2, correctfinalseq) = find_positions(longseq, correctseq,
                                                  correctmir, correctmirstar,
                                                  flanking)
@@ -2938,25 +2901,6 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                     correctmir=correctmirstar[:]
                     correctmirstar=tempcor[:]
 
-                #startmatlong=int(longseq.find(correctmir))#position of mir in the long seq
-                #startfinalseq=startmatlong-flanking#the start position in the long seq, based on user flanking
-                #templongseq=longseq[startfinalseq:]#cut the long, with userflanking number of nucleotides
-                #CAVH
-                #endmatlong=int(startmatlong + len(correctmir)-1) #End position mir
-                #templongnomirseq=longseq[endmatlong:] #Cut at the end position
-                #
-                #log.debug(["1st temp",startmatlong,startfinalseq,templongseq])
-                #startmatstarlong=int(templongseq.find(correctmirstar))
-                #startmatstarlong=int(templongnomirseq.find(correctmirstar)) #CAVH, search without mature seq detec    ted earlier
-                #endmatstarlong=int(startmatstarlong+len(correctmirstar)-1)
-                #endfinalseq=endmatstarlong+flanking
-                #contextlongmature = int(templongseq.find(templongnomirseq)) #CAVH search start of portion without mir
-                #endfinalseqcontex=endfinalseq + contextlongmature #CAVH Update end coord
-                #log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
-                #correctfinalseq=str(templongseq[:endfinalseq+1])
-                #correctfinalseq=str(templongseq[:endfinalseqcontex+1]) #CAVH
-
-                #CAVH: Avoid overlapping on precursor:
                 start_mir = correctfinalseq.find(correctmir)
                 end_mir = (start_mir + len(correctmir)) - 1
                 correctfinalseqnomir = correctfinalseq[end_mir + 1:]
@@ -2965,15 +2909,11 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                 listmisalignedcorr.append(correctfinalseq)
                 listmisalignedcorr.append(int(start_mir))
                 listmisalignedcorr.append(int(end_mir))
-                #listmisalignedcorr.append(int(correctfinalseq.find(correctmir))) #CAVH
-                #listmisalignedcorr.append(int(correctfinalseq.find(correctmir))+len(correctmir)) #CAVH
                 start_mirstar_temp = correctfinalseqnomir.find(correctmirstar)
                 star_mirstar = start_mirstar_temp + index_to_update
                 end_mirstar = (start_mirstar + len(correctmirstar)) - 1
                 listmisalignedcorr.append(int(star_mirstar))
                 listmisalignedcorr.append(int(end_mirstar))
-                #listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar))) # CAVH
-                #listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar))+len(correctmirstar)) #CAVH
                 listmisalignedcorr.append(str(orien))
                 countcorrected=countcorrected+1
                 listcorrected.append(corriddes.strip())
@@ -2990,9 +2930,6 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                 correctmir=str(listgoodnew[corrind+3])
                 correctmirstar=str(listgoodnew[corrind+4])
                 orien=str(listgoodnew[corrind+6])
-                #coor1=int(longseq.find(correctmir))
-                #coor2=int(longseq.find(correctmirstar))
-                #CAVH
                 (coor1, coor2, correctfinalseq) = find_positions(longseq, correctseq,
                                                  correctmir, correctmirstar,
                                                  flanking)
@@ -3002,34 +2939,12 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                     correctmir=correctmirstar[:]
                     correctmirstar=tempcor[:]
 
-                #startmatlong=int(longseq.find(correctmir))#position of mir in the long seq
-                #startfinalseq=startmatlong-flanking#the start position in the long seq, based on user flanking
-                #templongseq=longseq[startfinalseq:]#cut the long, with userflanking number of nucleotides
-                ## CAVH
-                #endmatlong=int(startmatlong + len(correctmir)-1)
-                #templongnomirseq=longseq[endmatlong:]
-                #
-                #log.debug(["1st temp",startmatlong,endmatlong,startfinalseq,templongseq])
-                #startmatstarlong=int(templongseq.find(correctmirstar))
-                #startmatstarlong=int(templongnomirseq.find(correctmirstar)) #CAVH, search without mature seq detected earlier
-                #endmatstarlong=int(startmatstarlong+len(correctmirstar)-1)
-                #endfinalseq=endmatstarlong+flanking
-                #contextlongmature = int(templongseq.find(templongnomirseq))
-                #endfinalseqcontex=endfinalseq + contextlongmature #CAVH
-                #log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
-                #correctfinalseq=str(templongseq[:endfinalseq+1])
-                #correctfinalseq=str(templongseq[:endfinalseqcontex+1]) #CAVH
-
                 start_mir = correctfinalseq.find(correctmir)
                 end_mir = (start_mir + len(correctmir)) - 1
                 correctfinalseqnomir = correctfinalseq[end_mir + 1:]
                 index_to_update = correctfinalseq.find(correctfinalseqnomir)
                 listmisalignedcorr.append(corriddes)
                 listmisalignedcorr.append(correctfinalseq)
-                #listmisalignedcorr.append(int(correctfinalseq.find(correctmir))) #CAVH
-                #listmisalignedcorr.append(int(correctfinalseq.find(correctmir))+len(correctmir)) #CAVH
-                #listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar))) #CAVH
-                #listmisalignedcorr.append(int(correctfinalseq.find(correctmirstar))+len(correctmirstar)) #CAVH
                 listmisalignedcorr.append(int(start_mir))
                 listmisalignedcorr.append(int(end_mir))
                 start_mirstar_temp = correctfinalseqnomir.find(correctmirstar)
@@ -3041,13 +2956,6 @@ def correct(corid,flanking,countcorrected,countcorrectedTonew,listofnew,listofne
                 countcorrectedTonew=int(countcorrectedTonew)+1
                 listcorrectedori.append(corriddes.strip())
                 log.debug(["corrected seq",correctfinalseq])
-                # CAVH: There is no reason to have this here:
-                #if corid.strip()=='la-mir-30c' or corriddes.strip()=='MI0019480':
-                #    log.debug("IN correct test here")
-                #    log.debug(["long seq",longseq,templong[indexlongmat]])
-                #    log.debug(["1st temp",startmatlong,startfinalseq,templongseq])
-                #    log.debug(["2nd temp",startmatstarlong,endmatstarlong,endfinalseq])
-                #    log.debug(["list misaligned",listmisalignedcorr])
 
         return int(countcorrected),int(countcorrectedTonew),listmisalignedcorr,listcorrected,listcorrectedori
 
@@ -3067,9 +2975,9 @@ def index_genomes(genomes_file):
             for genome in files:
                 genome = str(genome.rstrip())
                 # Blast db files
-                #file_names_list = [genome+".ndb", genome+".nhr", genome+".nin",
+                # file_names_list = [genome+".ndb", genome+".nhr", genome+".nin",
                 #                   genome+".not", genome+".nsq", genome+".ntf", genome+".nto"]
-                file_names_list = [ genome+".nin", genome+".nhr", genome+".nsq" ]
+                file_names_list = [genome+".nin",genome+".nhr",genome+".nsq"]
                 if all(list(map(os.path.isfile,file_names_list))):
                     log.debug('Using detected blast index from '+str(genome))
                     listofgenomes.append(genome)
@@ -3174,7 +3082,6 @@ def sublist(queue, configurer, level, filename, args):
         suma=[]
         sumall=[]
         nomats=0#in case no mat exists and no mats at all
-        #userflanking=0 #redundant
         listnomatremoved=[]
         flagnomatexists=False
 
@@ -3186,8 +3093,6 @@ def sublist(queue, configurer, level, filename, args):
 
         OldShanon=0
         NewShanon=0
-        #familyfileresfinal=open(outdir+filename.strip()+"-Final.fasta","a")
-        #anchorcoorfile=open(outdir+filename.strip()+"-Final.anc","a")
         tempcountsucnomat=0
         infile=""
         outfile=""
@@ -3343,11 +3248,6 @@ def sublist(queue, configurer, level, filename, args):
                     mspos=pseq.find(fmatseq)
                     mepos=pseq.rfind(ematseq)  # rfind returns the last index of the match
 
-#                    if not mspos and mepos:
-#                        mspos=pseq.rfind(str(Seq(fmatseq).reverse_complement()))
-#                        mepos=pseq.find(str(Seq(ematseq).reverse_complement()))
-                    # Now we have found start and end position on plus and minus strands
-
                     xcutseq=len(pseq[:mspos])#used in case the seq not found in the genome
                     ycutseq=len(pseq[mepos+1:])
 
@@ -3362,23 +3262,10 @@ def sublist(queue, configurer, level, filename, args):
                         log.debug(logid+'long2matseq: '+str(long2matseq))
 
                         if long2matseq!="":
-                            #CAVH
                             (fspos, fepos, cutpseq) = find_positions(long2matseq, pseq.replace("U", "T"),
                                                                              fmatseq.replace("U", "T"), ematseq.replace("U", "T"),
                                                                              userflanking)
 
-                            #if xcut>=0 and xcut<=50:
-                            #    fspos=(mspos+100)-xcut
-                            #elif xcut>50 or xcut<0:
-                            #    fspos=(mspos+100)-10
-
-                            #if ycut>=0 and ycut<=50:
-                            #    fepos=(mepos+100)+ycut
-                            #elif ycut>50 or ycut<0:
-                            #    fepos=(mepos+100)+10 #This is the start of mir*
-
-                            ##cutpseq=long2matseq[fspos:fepos+1]
-                            #cutpseq=long2matseq[fspos:fepos+len(ematseq)]
                             with open(outdir+filename+"-res.fa","a") as familyfileres:
                                 familyfileres.write(">"+str(record.description)+"\n"+str(cutpseq).replace('T','U')+"\n")
                             with open(outdir+filename.strip()+"-Final.fasta","a") as familyfileresfinal:
@@ -3403,14 +3290,12 @@ def sublist(queue, configurer, level, filename, args):
                             elif ycutseq<=10 and (ycut>50 or ycut<0):
                                 fepos=len(pseq)
 
-                            #cutpseq=pseq[fspos:fepos]
                             cutpseq=pseq[fspos:fepos+len(ematseq)]
                             with open(outdir+filename+"-res.fa","a") as familyfileres:
                                 familyfileres.write(">"+str(record.description)+"\n"+str(cutpseq).replace('T','U')+"\n")
                             with open(outdir+filename.strip()+"-Final.fasta","a") as familyfileresfinal:
                                 familyfileresfinal.write(">"+str(record.description)+"\n"+str(cutpseq).replace('T','U')+"\n")
 
-        #familyfileres.close()
 
         if len(listofmirstar)>0:
             mirstarfile=open(outdir+filename.strip()+"-mirstar.fa","a")
@@ -3455,27 +3340,18 @@ def sublist(queue, configurer, level, filename, args):
                     second = None
                     curmatseq = None
                     curmatstar = None
-                    #Here use find because both matures were reported at the
-                    #Beginning and we are iterating over the complete mature file
+                    # Here use find because both matures were reported at the
+                    # Beginning and we are iterating over the complete mature file
                     for record in SeqIO.parse(mtf, 'fasta'):
                         sequence=str(record.seq)
-                        if firstmat.strip() == record.description.split(" ")[1]: #CAVH specific label
-                            #startmat=int(mat2seq.find(curmatseq))
-                            #endmat=(startmat+len(curmatseq))-1
+                        if firstmat.strip() == record.description.split(" ")[1]: # specific label
                             first = 'Found'
                             curmatseq = sequence
-                            #log.debug(logid+str(["heres new mir",mat2seq,startmat,endmat,curmatseq]))
 
-                        if lastmat.strip() == record.description.split(" ")[1]: #CAVH specific label
-                            #startmatstar = int(mat2seq.find(curmatseq))
-                            #endmatstar=(startmatstar+len(curmatseq))-1
+                        if lastmat.strip() == record.description.split(" ")[1]: # specific label
                             second = 'Found'
                             curmatstar = sequence
-                            #log.debug(logid+str(["heres new mir*",mat2seq,startmatstar,endmatstar,curmatseq]))
                     (startmat, startmatstar, finalseq) = find_positions(mat1seq, mat1seq,curmatseq, curmatstar,userflanking)
-                    #endmat = startmat+len(curmatseq)-1
-                    #endmatstar = (startmatstar+len(curmatstar))-1
-                    #CAVH: Because was find(), check that startmat, endmat, startmatstar, endmatstar have values != None
                     log.debug(logid+str([curmatseq,startmat, startmatstar, finalseq]))
                     if startmat == None or startmatstar == None:
                         log.debug(logid+'Not possible to locate the mapping referred mir or mir* on the mature file for '+resprecid+' with '+mat2seq)
@@ -3515,16 +3391,12 @@ def sublist(queue, configurer, level, filename, args):
                     star=False
                     nstar=False
                     curmatID=linesplit[4]
-                    startmattemp=0
-                    endmattemp=0
                     startmat=0
                     endmat=0
                     startmatstar=0
                     endmatstar=0
                     list1matcoor.append(resprecid)
                     finalseq="A"
-                    tempseq="A"
-                    numberendflank=0
                     startfinalseq=0
                     endfinalseq=0
                     mtf = openfile(matfile)
@@ -3547,19 +3419,11 @@ def sublist(queue, configurer, level, filename, args):
                             star=True
                             break
 
-                    #coortemp1=int(mat1seq.index(curmatseq))
-                    #coortemp2=int(mat1seq.index(curmatstar))
                     # Here genome did not exists, then it is reeplaced by the same precursor seq to obtain
                     # the mature coordinates
                     (coortemp1, coortemp2, finalseq) = find_positions(mat1seq, mat1seq,
                                                  curmatseq, curmatstar,
                                                  userflanking)
-
-
-                    #if coortemp1 == -1 or coortemp2 == -1:
-                    #    log.error(logid+'Not possible to locate miR or miR* in '+curmatID+' with '+mat1seq+" and "+curmatseq+ " and "+ curmatstar)
-                    #    sys.exit()
-
 
                     if coortemp2<coortemp1:
                         tempseqex=curmatseq[:]
@@ -3569,36 +3433,10 @@ def sublist(queue, configurer, level, filename, args):
                     log.debug(logid+str(["no long",coortemp1,coortemp2,curmatseq,curmatstar]))
                     startmat=coortemp1
                     endmat=(startmat+len(curmatseq))-1
-                    #startmattemp=int(mat1seq.find(curmatseq))
-
-                    #if startmattemp<=userflanking:
-                    #    startmat=startmattemp
-                    #    startfinalseq=0
-                    #elif startmattemp>userflanking:
-                    #    startmat=userflanking
-                    #    startfinalseq=startmattemp-(startmat-userflanking)
-
-                    #endmat=(startmat+len(curmatseq))-1
-                    #tempseq=mat1seq[startfinalseq:]
-                    #tempnomirseq=mat1seq[endmat:] #CAVH fragment without detected mir
-                    #updateindexnomirregion = int(tempseq.find(tempnomirseq)) #CAVH start of no mir region on tempseq context
-                    #log.debug(logid+str(["curmat not",mat1seq,curmatseq]))
-                    #log.debug(logid+str(['coor not',startmat,endmat]))
 
                     if star:
                         startmatstar=coortemp2
                         endmatstar=startmatstar+int(len(curmatstar)-1)
-                        #startmatstar=int(tempnomirseq.find(curmatstar)) #CAVH search on region without mir
-                        #endmatstar=startmatstar+int(len(curmatstar)-1)
-                        #endmatstar = startmatstar+int(len(curmatstar)-1) + updateindexnomirregion #CAVH
-                        #numberendflank=int(len(tempseq)-endmatstar-1)
-
-                        #if numberendflank<=userflanking:
-                        #    finalseq=tempseq[0:]
-                        #elif numberendflank>userflanking:
-                        #    endfinalseq=endmatstar+userflanking
-                        #    finalseq=tempseq[0:endfinalseq+1]
-
                         log.debug(logid+str(['coor star not',startmatstar,endmatstar,finalseq]))#,startmatstarlong,endmatstarlong)
 
                     if star and nstar and startmatstar!=-1 and endmatstar!=-1 and startmatstar>endmat:
@@ -3679,13 +3517,7 @@ def sublist(queue, configurer, level, filename, args):
                     startmatstar=0
                     endmatstar=0
                     longseq=""
-                    startmatlong=0
-                    startfinalseq=0
                     startmat=0
-                    templongseq=""
-                    startmatstarlong=0
-                    endmatstarlong=0
-                    endfinalseq=0
                     finalseq="A"
                     startmatstar=0
                     endmatstar=0
@@ -3708,22 +3540,16 @@ def sublist(queue, configurer, level, filename, args):
                             curmatsplit=(starrec.description).split()
                             curmatsplit1=(curmatsplit[1]).split('-')
                             starrecID=curmatsplit1[0]
-                            #if (curmatID).strip()==(starrecID).strip(): #or (curmatID).strip()+'/' in (starrecID).strip() and (resprecid.strip() in starrec.description):
-                            if (curmatID).strip()==(starrecID).strip(): #CAVH
+                            if (curmatID).strip()==(starrecID).strip():
                                 curmatstar=str(starrec.seq)
                                 star=True
                                 break
-                            #else:
-                            #    log.debug(logid+'Searching for curmatstar in '+str(starrec)+' with '+';'.join([curmatID.strip(),starrecID.strip(),resprecid.strip(),starrec.description]))
 
                     if not curmatstar:
                         log.error(logid+'Not possible to define curmatstar for '+ resprecid +' in '+str(matfile)+' and '+str(outdir+filename.strip()+"-mirstar.fa"))
                         sys.exit()
 
                     log.debug(["coor1temp",longseq,curmatseq,curmatstar,resprecid])
-                    #coortemp1=int(longseq.index(curmatseq))
-                    #coortemp2=int(longseq.index(curmatstar))
-                    #CAVH
                     (coortemp1, coortemp2, finalseq) = find_positions(longseq, mat2seq,
                                                  curmatseq, curmatstar,
                                                  userflanking)
@@ -3753,28 +3579,6 @@ def sublist(queue, configurer, level, filename, args):
                         curmatseq=curmatstar[:]
                         curmatstar=tempseqex[:]
 
-                    #CAVH
-                    #startmatlong=int(longseq.find(curmatseq))
-                    #startfinalseq=startmatlong-userflanking
-                    #startmat=userflanking
-                    #endmat=(startmat+len(curmatseq))-1
-                    #endmatlong=int(startmatlong + len(curmatseq)-1) #CAVH exlude all
-                    #templongseq=longseq[startfinalseq:]
-                    #templongnomirseq=longseq[endmatlong:] #CAVH portion without mir
-                    #contextlongmature = int(templongseq.find(templongnomirseq)) #CAVH update coordinates on mir context
-                    #log.debug(["curmat long",mat1seq,curmatseq,longseq])
-                    #log.debug(['coor long',startmat,endmat])
-
-                    #startmatstarlong=int(templongseq.find(curmatstar)) # CAVH
-                    #startmatstarlong=int(templongnomirseq.find(curmatstar))
-                    #endmatstarlong=int(startmatstarlong+len(curmatstar)-1)
-                    #endfinalseq=endmatstarlong+userflanking
-                    #endfinalseqcontex=endfinalseq + contextlongmature #CAVH
-                    #finalseq = str(templongseq[:endfinalseqcontex+1]) #CAVH
-                    #finalseq=str(templongseq[:endfinalseq+1])
-                    #log.debug(["final seq",finalseq,curmatstar,endfinalseq+1])
-
-                    ### CAVH
                     #Look for mir in final seq:
                     startmirfinal = int(finalseq.find(curmatseq))
                     endmirfinal = int(startmirfinal + len(curmatseq) - 1)
@@ -3788,20 +3592,9 @@ def sublist(queue, configurer, level, filename, args):
                     endmat=endmirfinal
                     startmatstar = startmirstarfinal + indexupdate
                     endmatstar = endmirstarfinal + indexupdate
-                    #startmatstar=int(finalseq.find(curmatstar))
-                    #endmatstar=int(startmatstar+len(curmatstar)-1)
-                    #CAVH
                     log.debug(['coor',startmat, endmat, startmatstar,endmatstar])
-                    #CAVH: Additional filters after correction and position:
-                    # Calculate MFE on final hairpin
-                    # filter those which reported > -10 MFE.
-                    # Measure long hairpins
                     # Previous evaluations:
                     (structure, mfe, loopsize, length_precursor) = evaluate_final_hairpin(finalseq, startmat, endmat, startmatstar, endmatstar, resprecid)
-                    #if startmatstar > endmat and (startmatstar != -1) and (endmat != -1):
-                    #    loopsize = abs(startmatstar - endmat)
-                    #elif startmatstar<endmat and (startmatstar != -1) and (endmat != -1):
-                    #    loopsize = abs(endmatstar - startmat)
 
                     if mfe > -10:
                         startmat=0
@@ -3927,7 +3720,6 @@ def sublist(queue, configurer, level, filename, args):
                         endmatstar=0
                         break
 
-        #familyfileresfinal.close()
         log.debug([len(list2matcoor), len(list1matcoor), list2matcoor, list1matcoor])
         listmatcoor=list2matcoor+list1matcoor
 
@@ -4013,11 +3805,11 @@ def sublist(queue, configurer, level, filename, args):
                 ndhalfsum=ndhalfgaps+ndhalfsum
                 numofseqs=numofseqs+1
             log.debug([sthalfsum,ndhalfsum,totalstnucnum,totalndnucnum])
-            # CAVH: Here calculated the average of nt on left side of align (stnucavg) and on the right side (ndnucavg) on the alignment
+            # Here calculated the average of nt on left side of align (stnucavg) and on the right side (ndnucavg) on the alignment
             stnucavg=totalstnucnum/numofseqs
             ndnucavg=totalndnucnum/numofseqs
             alignment=AlignIO.read(outdir+filename.strip()+'.stk',"stockholm")
-            #CAVH: Here iterate again but with calculated average scores
+            # Here iterate again but with calculated average scores
             for record in alignment:
                 lenseq=len(str(record.seq))
                 seq=str(record.seq)
@@ -4090,7 +3882,6 @@ def sublist(queue, configurer, level, filename, args):
 
             mirstarcorrectedfile.close()
 
-            #anchorcoorfilecorrected=open(outdir+filename.strip()+"-corrected.anc","a")
             log.debug(["here listmatcoor 3 ",listmatcoor])
             mi=0
             mk=0
@@ -4106,7 +3897,6 @@ def sublist(queue, configurer, level, filename, args):
                 mi=mi+7
 
             maxidesc=0
-            #anchorcoorfilecorrected.close()
             finalstkcorrected=open(outdir+filename.strip()+'corrected.stk','a')
             finalstkcorrected.write('# STOCKHOLM 1.0\n')
             if matrdir:
@@ -4337,7 +4127,6 @@ def sublist(queue, configurer, level, filename, args):
         flippednotcorrected=int((len(listofnew)/2))+int((len(listofnewloop)/2))-int(countcorrected)
         flippedcorrected=int(countcorrected)+int(countcorrectedTonew)
 
-
         #sequences distribution
         with2mats=len(list2mat)/3
         with0mats=len(listnomat)
@@ -4346,9 +4135,6 @@ def sublist(queue, configurer, level, filename, args):
         #Shanon
         oldshanon=OldShanon/10
         newshanon=NewShanon/10
-
-        #pdf=plt.figure(figsize=(6,6))
-        #N = 5
 
         tProcessed+=Processed#all start with 't', are for the total of all families
         tRemoved+=Removed
@@ -4398,105 +4184,12 @@ def sublist(queue, configurer, level, filename, args):
         sumall.append(newshan[4])
         sumall.append(oldshan[4])
 
-        #ind = np.arange(N)    # the x locations for the groups
-        #width = 0.35       # the width of the bars: can also be len(x) sequence
-
-        ### Plot
-        #pdf, ax = plt.subplots()
-
-        #if Totalrem[0]==0:
-        #    Totalrem[0]=0.15
-        #    p1 = ax.bar(ind+width, Totalrem, width, color='#FFFFFF',edgecolor='black')#,tick_label='Total')
-        #else:
-        #    p1 = ax.bar(ind+width, Totalrem, width, color='#FF0000')#,tick_label='Total')
-        #if Totalproc[0]==0:
-        #    Totalproc[0]=0.15
-        #    p2 = ax.bar(ind+width*2, Totalproc, width, color='#FFFFFF',edgecolor='black')
-        #else:
-        #    p2 = ax.bar(ind+width*2, Totalproc, width,bottom=0,color='#BB0000')#,'grey','blue','yellow','lime'])
-
-        #COL2/seq-distribution
-        #if seq0mat[1]==0:
-        #    seq0mat[1]=0.15
-        #    p3 = ax.bar(ind+width, seq0mat, width,color='#FFFFFF',edgecolor='black')
-        #else:
-        #    p3 = ax.bar(ind+width, seq0mat, width,color='#660000')
-
-        #if seq1mat[1]==0:
-        #    seq1mat[1]=0.15
-        #    p4 = ax.bar(ind+width*2, seq1mat, width,bottom=0,color='#FFFFFF',edgecolor='black')
-        #else:
-        #    p4 = ax.bar(ind+width*2, seq1mat, width,bottom=0,color='#669900')#,tick_label='Sequences\n Distribution')
-
-        #if seq2mat[1]==0:
-        #    seq2mat[1]=0.15
-        #    p5 = ax.bar(ind+width*3, seq2mat, width,bottom=0,color='#FFFFFF',edgecolor='black')
-        #else:
-        #    p5 = ax.bar(ind+width*3, seq2mat, width,bottom=0,color='#996600')
-
-        #col3/flipped
-        #if flippednotcorr[2]==0:
-        #    flippednotcorr[2]=0.15
-        #    p6 = ax.bar(ind+width*2, flippednotcorr, width,color='#FFFFFF',edgecolor='black')#,tick_label='Changed\n sequences')
-        #else:
-        #    p6 = ax.bar(ind+width*2, flippednotcorr, width,color='#0000FF')#,tick_label='Changed\n sequences')
-
-        #if flippedcorr[2]==0:
-        #    flippedcorr[2]=0.15
-        #    p7 = ax.bar(ind+width*3, flippedcorr, width,bottom=0,color='#FFFFFF',edgecolor='black')
-        #else:
-        #    p7 = ax.bar(ind+width*3, flippedcorr, width,bottom=0,color='#00CCFF')
-
-        #col4/nomats
-        #if Nomatspred[3]==0:
-        #    Nomatspred[3]=0.15
-        #    p8 = ax.bar(ind+width*2, Nomatspred, width,color='#FFFFFF',edgecolor='black')#,tick_label='Precursors\n without \n mature(s)')
-        #else:
-        #    p8 = ax.bar(ind+width*2, Nomatspred, width,color=['#7D7D7D'])#,tick_label='Precursors\n without \n mature(s)')
-
-        #if Nomatsnotpred[3]==0:
-        #    Nomatsnotpred[3]=0.15
-        #    p9 = ax.bar(ind+width*3, Nomatsnotpred, width,bottom=0,color='#FFFFFF',edgecolor='black')
-        #else:
-        #    p9 = ax.bar(ind+width*3, Nomatsnotpred, width,bottom=0,color='#0D0D0D')#,tick_label='Total')
-
-        #col5/shanon
-        #if newshan[4]==0:
-        #    newshan[4]=0.15
-        #    p10 = ax.bar(ind+width*2, newshan, width,color='#FFFFFF',edgecolor='black')
-        #else:
-        #    p10 = ax.bar(ind+width*2, newshan, width,color='#003300')#,tick_label='Alignment\n Entropy')
-
-        #if oldshan[4]==0:
-        #    oldshan[4]=0.15
-        #    p11 = ax.bar(ind+width*3, oldshan, width,bottom=0,color='#FFFFFF',edgecolor='black')
-        #else:
-        #   p11 = ax.bar(ind+width*3, oldshan, width,bottom=0,color='#009900')
-
-        #ax.set_title('Statistics for file (family)-'+str(filename).strip())
-        #ax.set_xticks(ind + width+(width))
-        #ax.set_ylabel('Number / Entropy')
-        #ax.set_title('Statistics for file (family)-'+str(filename).strip())
-        #ax.set_xticklabels(('Total', 'Sequences\n Distribution', 'Changed\n sequences', 'Precursors\n without \n mature(s)', 'Alignment\n Entropy'))
-        #if max(sumall)>25:
-        #        offset=int(max(sumall)/25)
-        #        log.debug(['maxsum',max(sumall),sumall])
-        #else:
-        #        offset=1
-
-        #ax.set_yticks(np.arange(0, max(sumall)+5, offset))
-        #ax.legend((p1[0], p2[0],p3[1],p4[1],p5[2],p6[2],p7[3],p8[3],p9[3],p10[4],p11[4]), ('Removed', 'Processed *','Without mature','With 1 mature','With 2 matures','Changed Not Corrected','Corrected misaligned','Predicted','No mature Predicted','New Entropy','Old Entropy'))#,title="White bars refer to zero/doesn't exist")
-
-        #pdf.savefig(outdir+filename.strip()+'statistics.pdf')
-        #plt.close('all')
-
         with open(outdir+filename.strip()+"-summ.txt","a") as summaryfile:
             summaryfile.write("---------------------------Results In Numbers----------------------------\n")
             summaryfile.write("*Number of remained precursors= "+str(int((len(listofold)/2)+(len(list2mat)/3)))+"\n")
             summaryfile.write("*Number of remained precursors with bad positioned matures= "+str(int((len(listofoldloop)/2)))+"\n")
             summaryfile.write("*Number of flipped(changed) precursors= "+str(int((len(listofnew)/2)))+"\n")
             summaryfile.write("*Number of flipped(changed) precursors with bad positioned matures= "+str(int((len(listofnewloop)/2)))+"\n")
-            #summaryfile.write("*Number of removed precursors= "+str(int(len(listofboth)/2))+"\n")
             summaryfile.write("*Number of removed precursors= "+str(int(Removed))+"\n")
             summaryfile.write("*Number of precursors without a given matures= "+str(int(len(listnomat)))+"\n")
             summaryfile.write("*Number of precursors with successfully predicted matures= "+str(int(len(listnomat)-len(listremovedbroken)-len(listremovedscore)-len(listremovedN)-len(listremovenoloop)-len(listhighmfe)-len(listbadmature)-len(listlonghairpin)))+"\n")
@@ -4693,6 +4386,7 @@ def sublist(queue, configurer, level, filename, args):
         )
         log.error(logid+''.join(tbe.format()))
 
+
 def parseargs():
     parser = argparse.ArgumentParser(description='MIRfix automatically curates miRNA datasets by improving alignments of their precursors, the consistency of the annotation of mature miR and miR* sequence, and the phylogenetic coverage. MIRfix produces alignments that are comparable across families and sets the stage for improved homology search as well as quantitative analyses.')
     parser.add_argument("-j", "--cores", type=int, default=1, help='Number of parallel processes to run')
@@ -4717,28 +4411,21 @@ def parseargs():
 
 def main(args):
     try:
-
         #  Logging configuration
         logdir = args.logdir
         logfile = str.join(os.sep,[os.path.abspath(logdir),scriptname+'.log'])
-
         makelogdir(logdir)
         makelogfile(logfile)
-
         #  Multiprocessing with spawn
         nthreads = args.cores or 2
         multiprocessing.set_start_method('spawn')  # set multiprocessing start method to safe spawn
         pool = multiprocessing.Pool(processes=nthreads, maxtasksperchild=1)
-
         queue = multiprocessing.Manager().Queue(-1)
         listener = multiprocessing.Process(target=listener_process, args=(queue, listener_configurer, logfile, args.loglevel))
         listener.start()
-
         worker_configurer(queue, args.loglevel)
-
         log.info(logid+'Running '+scriptname+' on '+str(args.cores)+' cores.')
         log.info(logid+'CLI: '+sys.argv[0]+' '+'{}'.format(' '.join( [shlex.quote(s) for s in sys.argv[1:]] )))
-
         lfams = []
         with openfile(args.families) as filelist:
             for line in filelist:
@@ -4746,19 +4433,17 @@ def main(args):
                 if line.endswith( ".fa"):
                     line = line[:-3]
                 ## check if there are already output directories
-                ## to prevent errors 
+                ## to prevent errors
                 if os.path.exists( args.outdir + line + ".out/") and not args.force:
                     sys.exit( '\nError: At least one output directory already exists! Won\'t override!\nTo override the original output folder, please specify the \'--force\' option.\n')
                 lfams.append( line)
 
         for fam in lfams:
-            #sublist(queue, fam, args)
             pool.apply_async(sublist, args=(queue, worker_configurer, args.loglevel, fam, args))
         pool.close()
         pool.join()
         queue.put_nowait(None)
         listener.join()
-        #CAVH
         sys.exit()
 
     except Exception:
